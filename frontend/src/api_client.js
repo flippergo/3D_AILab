@@ -135,6 +135,111 @@ export async function getCodexTasks({ sessionId, limit = 20 } = {}) {
   return response.json();
 }
 
+export async function getCodexTask(taskId) {
+  const response = await fetch(`/codex-tasks/${encodeURIComponent(taskId)}`);
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "Codex依頼案の取得に失敗しました。");
+  }
+
+  return response.json();
+}
+
+export async function planCodexTask({ taskId, sessionId }) {
+  const response = await fetch(`/codex-tasks/${encodeURIComponent(taskId)}/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      session_id: sessionId,
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "Codex依頼案のプレビューに失敗しました。");
+  }
+
+  return response.json();
+}
+
+export async function applyCodexTask({ taskId }) {
+  const response = await fetch(`/codex-tasks/${encodeURIComponent(taskId)}/apply`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      confirm: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "Codex依頼案の適用に失敗しました。");
+  }
+
+  return response.json();
+}
+
+export async function requestCodexImplementation({ taskId }) {
+  const response = await fetch(`/codex-tasks/${encodeURIComponent(taskId)}/request-implementation`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "Codex実装依頼の登録に失敗しました。");
+  }
+
+  return response.json();
+}
+
+export async function getCodexImplementationRequests({ status, limit = 10 } = {}) {
+  const params = new URLSearchParams();
+  if (status) {
+    params.set("status", status);
+  }
+  params.set("limit", String(limit));
+  const response = await fetch(`/codex-implementation-requests?${params.toString()}`);
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "Codex実装依頼一覧の取得に失敗しました。");
+  }
+
+  return response.json();
+}
+
+export async function getCodexImplementationStatus({ taskId, tailChars = 8000 }) {
+  const params = new URLSearchParams({
+    tail_chars: String(tailChars),
+  });
+  const response = await fetch(`/codex-tasks/${encodeURIComponent(taskId)}/implementation-status?${params.toString()}`);
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "Codex実装状況の取得に失敗しました。");
+  }
+
+  return response.json();
+}
+
+export async function resetLabState() {
+  const response = await fetch("/lab/reset", {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "初期状態へのリセットに失敗しました。");
+  }
+
+  return response.json();
+}
+
 async function readErrorDetail(response) {
   try {
     const payload = await response.json();

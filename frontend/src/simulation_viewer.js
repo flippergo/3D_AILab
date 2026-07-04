@@ -23,20 +23,16 @@ export class GravityBallViewer {
     this.playing = false;
 
     const ballObject = result.objects.find((object) => object.id === "ball_1");
+    const floorObject = result.objects.find((object) => object.id === "floor");
     const radius = ballObject?.radius ?? 0.3;
-    const color = new THREE.Color(ballObject?.color ?? "#ffd166");
-    const ballMaterial = new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.45,
-      metalness: 0.03,
-      emissive: color.clone().multiplyScalar(0.12),
-    });
+    const ballMaterial = createBallMaterial(ballObject);
 
     this.ball = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 20), ballMaterial);
     this.ball.name = "gravity-ball";
     this.ball.castShadow = true;
     this.group.add(this.ball);
 
+    this.addFloor(floorObject);
     this.addTrajectory(result.frames);
     this.applyFrame(0);
   }
@@ -142,7 +138,7 @@ export class GravityBallViewer {
 
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({
-      color: 0xffd166,
+      color: new THREE.Color(this.result?.meta?.visuals?.trajectory_color ?? "#ffd166"),
       transparent: true,
       opacity: 0.72,
     });
@@ -150,6 +146,67 @@ export class GravityBallViewer {
     line.name = "gravity-ball-trajectory";
     this.group.add(line);
   }
+
+  addFloor(floorObject) {
+    const size = floorObject?.size ?? [6, 6];
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(size[0], size[1]),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(floorObject?.color ?? "#1a222b"),
+        roughness: 0.86,
+        metalness: 0.04,
+        transparent: true,
+        opacity: 0.82,
+      })
+    );
+    floor.name = "gravity-ball-floor";
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = 0.012;
+    floor.receiveShadow = true;
+    this.group.add(floor);
+  }
+}
+
+function createBallMaterial(ballObject) {
+  const color = new THREE.Color(ballObject?.color ?? "#ffd166");
+  const materialOptions = {
+    color,
+    roughness: 0.45,
+    metalness: 0.03,
+    emissive: color.clone().multiplyScalar(0.12),
+  };
+
+  if (ballObject?.color_mode === "rainbow") {
+    materialOptions.color = new THREE.Color("#ffffff");
+    materialOptions.map = createRainbowTexture(ballObject.palette);
+    materialOptions.emissive = color.clone().multiplyScalar(0.08);
+  }
+
+  return new THREE.MeshStandardMaterial(materialOptions);
+}
+
+function createRainbowTexture(palette) {
+  const colors = Array.isArray(palette) && palette.length > 0
+    ? palette
+    : ["#ff4b4b", "#ff9f1c", "#ffe45e", "#3ddc84", "#4dabf7", "#7b61ff"];
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  const gradient = context.createLinearGradient(0, 0, canvas.width, 0);
+
+  colors.forEach((color, index) => {
+    gradient.addColorStop(index / Math.max(colors.length - 1, 1), color);
+  });
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(1, 1);
+  return texture;
 }
 
 export class MazeAgentViewer {
@@ -177,7 +234,7 @@ export class MazeAgentViewer {
     this.playing = false;
 
     const gridSize = result.summary?.grid_size ?? result.meta?.parameters?.grid_size ?? 7;
-    this.addFloor(gridSize);
+    this.addFloor(gridSize, result.objects?.find((object) => object.id === "maze_floor"));
     this.addObjects(result.objects ?? [], gridSize);
     this.addAgent(result.objects?.find((object) => object.id === "agent_1"));
     this.addRoute(result.objects?.find((object) => object.id === "maze_path"), gridSize);
@@ -270,13 +327,13 @@ export class MazeAgentViewer {
     this.agent.position.set(position[0], position[1], position[2]);
   }
 
-  addFloor(gridSize) {
+  addFloor(gridSize, floorObject) {
     const floorGroup = new THREE.Group();
     floorGroup.name = "maze-floor";
 
     const tileGeometry = new THREE.BoxGeometry(0.92, 0.04, 0.92);
     const tileMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1b242d,
+      color: new THREE.Color(floorObject?.color ?? "#1b242d"),
       roughness: 0.82,
       metalness: 0.03,
     });
@@ -419,7 +476,7 @@ export class FlockingViewer {
     this.frameCursor = 0;
     this.playing = false;
 
-    this.addBounds(result.summary?.bounds ?? result.meta?.parameters?.bounds ?? 6);
+    this.addBounds(result.summary?.bounds ?? result.meta?.parameters?.bounds ?? 6, result.meta?.visuals?.bounds_color);
     (result.objects ?? []).forEach((object) => {
       if (object.type !== "boid") {
         return;
@@ -536,12 +593,12 @@ export class FlockingViewer {
     });
   }
 
-  addBounds(bounds) {
+  addBounds(bounds, boundsColor) {
     const size = bounds * 2;
     const geometry = new THREE.BoxGeometry(size, bounds * 0.75, size);
     const edges = new THREE.EdgesGeometry(geometry);
     const material = new THREE.LineBasicMaterial({
-      color: 0x45c4a0,
+      color: new THREE.Color(boundsColor ?? "#45c4a0"),
       transparent: true,
       opacity: 0.28,
     });

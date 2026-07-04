@@ -9,8 +9,13 @@ from typing import Any
 
 
 RESULT_PATH = Path(__file__).with_name("result.json")
+CUSTOMIZATION_PATH = Path(__file__).with_name("customization.json")
 MIN_SPEED = 0.45
 MAX_SPEED = 1.85
+DEFAULT_VISUALS = {
+    "agent_palette": ["#8fd3ff", "#ffd166", "#45c4a0"],
+    "bounds_color": "#45c4a0",
+}
 
 
 @dataclass(frozen=True)
@@ -28,6 +33,7 @@ class FlockingConfig:
 
 
 def run_simulation(config: FlockingConfig) -> dict[str, Any]:
+    visuals = _load_visuals()
     agent_count = _clamp_int(config.agent_count, 10, 80)
     steps = _clamp_int(config.steps, 120, 900)
     dt = _clamp_float(config.dt, 0.02, 0.2)
@@ -82,13 +88,14 @@ def run_simulation(config: FlockingConfig) -> dict[str, Any]:
             "steps": steps,
             "dt": dt,
             "parameters": parameters,
+            "visuals": visuals,
         },
         "objects": [
             {
                 "id": f"boid_{index}",
                 "type": "boid",
                 "radius": 0.14,
-                "color": _agent_color(index, agent_count),
+                "color": _agent_color(index, agent_count, visuals["agent_palette"]),
             }
             for index in range(agent_count)
         ],
@@ -116,7 +123,7 @@ def load_result(path: Path = RESULT_PATH) -> dict[str, Any]:
         return result
 
     result = json.loads(path.read_text(encoding="utf-8"))
-    if not result.get("frames"):
+    if not result.get("frames") or not result.get("meta", {}).get("visuals"):
         result = run_simulation(FlockingConfig())
         write_result(result, path)
     return json.loads(path.read_text(encoding="utf-8"))
@@ -230,7 +237,9 @@ def _average_distance_from_center(positions: list[list[float]]) -> float:
     return sum(_distance(position, center) for position in positions) / len(positions)
 
 
-def _agent_color(index: int, total: int) -> str:
+def _agent_color(index: int, total: int, palette: list[str]) -> str:
+    if palette:
+        return palette[index % len(palette)]
     hue = index / max(total, 1)
     r, g, b = _hsv_to_rgb(hue, 0.58, 1.0)
     return f"#{r:02x}{g:02x}{b:02x}"
@@ -287,6 +296,27 @@ def _clamp_int(value: int, minimum: int, maximum: int) -> int:
 
 def _clamp_float(value: float, minimum: float, maximum: float) -> float:
     return min(max(float(value), minimum), maximum)
+
+
+def _load_visuals(path: Path = CUSTOMIZATION_PATH) -> dict[str, Any]:
+    visuals = {
+        "agent_palette": list(DEFAULT_VISUALS["agent_palette"]),
+        "bounds_color": DEFAULT_VISUALS["bounds_color"],
+    }
+    if not path.exists():
+        return visuals
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return visuals
+    custom_visuals = data.get("visuals") or {}
+    palette = custom_visuals.get("agent_palette")
+    if isinstance(palette, list) and all(isinstance(value, str) for value in palette):
+        visuals["agent_palette"] = palette
+    bounds_color = custom_visuals.get("bounds_color")
+    if isinstance(bounds_color, str):
+        visuals["bounds_color"] = bounds_color
+    return visuals
 
 
 if __name__ == "__main__":

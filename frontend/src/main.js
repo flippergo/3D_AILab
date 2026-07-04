@@ -1,23 +1,31 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
+  applyCodexTask,
+  getCodexImplementationRequests,
+  getCodexImplementationStatus,
   getFlockingResult,
+  getCodexTask,
   getCodexTasks,
   getGravityBallResult,
   getMazeAgentResult,
+  planCodexTask,
+  requestCodexImplementation,
+  resetLabState,
   runFlocking,
   runGravityBall,
   runMazeAgent,
   saveCodexTask,
   sendChatMessage,
-} from "./api_client.js";
-import { animateLabAssistant, createLabAssistant } from "./avatar.js";
-import { setupLabUi } from "./lab_ui.js";
-import { FlockingViewer, GravityBallViewer, MazeAgentViewer } from "./simulation_viewer.js";
+} from "./api_client.js?v=20260704-progress-sync2";
+import { animateLabAssistant, createLabAssistant } from "./avatar.js?v=20260704-progress-sync2";
+import { setupLabUi } from "./lab_ui.js?v=20260704-progress-sync2";
+import { FlockingViewer, GravityBallViewer, MazeAgentViewer } from "./simulation_viewer.js?v=20260704-progress-sync2";
 
 const canvas = document.querySelector("#scene");
 const sessionKey = "3d-ai-lab-session-id";
 let sessionId = window.localStorage.getItem(sessionKey);
+let codexImplementationPollId = null;
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -62,6 +70,7 @@ const viewers = {
 };
 let activeSimulation = "gravity_ball";
 let currentCodexTaskDraft = null;
+let codexImplementationPollFailures = 0;
 mazeAgentViewer.setVisible(false);
 flockingViewer.setVisible(false);
 
@@ -71,12 +80,8 @@ const ui = setupLabUi({
       const response = await sendChatMessage({ message, sessionId });
       sessionId = response.session_id;
       window.localStorage.setItem(sessionKey, sessionId);
-      ui.addAssistantMessage(response.reply);
-      if (response.experiment_spec) {
-        ui.addAssistantMessage(formatExperimentSpec(response.experiment_spec));
-      }
+      const isPendingImplementationConfirmation = response.assistant_notes?.includes("シミュレーション実装確認待ち") ?? false;
       if (response.codex_task) {
-        ui.addAssistantMessage(`Codex向けタスク案:\n${response.codex_task}`);
         currentCodexTaskDraft = {
           session_id: sessionId,
           source_message: message,
@@ -93,21 +98,21 @@ const ui = setupLabUi({
       if (response.suggested_action === "run_gravity_ball") {
         switchSimulation("gravity_ball");
         ui.applyGravityBallParams(response.simulation_params ?? {});
-        ui.addAssistantMessage("gravity_ball を指定条件で実行します。");
+        ui.setSpeech("gravity_ball を指定条件で実行します。");
         await runActiveSimulationFromUi();
       }
 
       if (response.suggested_action === "run_maze_agent") {
         switchSimulation("maze_agent");
         ui.applyMazeAgentParams(response.simulation_params ?? {});
-        ui.addAssistantMessage("maze_agent を軽量探索で実行します。");
+        ui.setSpeech("maze_agent を軽量探索で実行します。");
         await runActiveSimulationFromUi();
       }
 
       if (response.suggested_action === "run_flocking") {
         switchSimulation("flocking");
         ui.applyFlockingParams(response.simulation_params ?? {});
-        ui.addAssistantMessage("flocking を指定条件で実行します。");
+        ui.setSpeech("flocking を指定条件で実行します。");
         await runActiveSimulationFromUi();
       }
     } catch (error) {
@@ -118,7 +123,7 @@ const ui = setupLabUi({
   },
 });
 
-ui.addAssistantMessage("こんにちは。ここでは小さな3D実験の相談ができます。");
+ui.setSpeech("こんにちは。ここでは小さな3D実験の相談ができます。");
 ui.onRunSimulation(runActiveSimulationFromUi);
 ui.onLoadResult(loadLatestActiveSimulation);
 ui.onSimulationChange(async (simulationName) => {
@@ -146,12 +151,18 @@ ui.onSpeedChange((speed) => {
 });
 ui.onSaveCodexTask(saveCurrentCodexTaskDraft);
 ui.onCopyCodexTask(copyCurrentCodexTaskDraft);
+ui.onPreviewCodexTask(previewCurrentCodexTask);
+ui.onApplyCodexTask(applyCurrentCodexTask);
+ui.onRequestCodexImplementation(requestCurrentCodexImplementation);
+ui.onLabReset(resetLabToInitialState);
 
 resize();
 window.addEventListener("resize", resize);
 requestAnimationFrame(tick);
 loadLatestActiveSimulation();
 loadCodexTaskHistory();
+resumeAnyCodexImplementationProgress();
+window.setInterval(resumeAnyCodexImplementationProgress, 5000);
 
 function tick() {
   const delta = clock.getDelta();
@@ -346,6 +357,10 @@ async function saveCurrentCodexTaskDraft() {
   ui.setCodexTaskBusy(true);
   try {
     const result = await saveCodexTask(currentCodexTaskDraft);
+    currentCodexTaskDraft.task_id = result.task_id;
+    currentCodexTaskDraft.created_at = result.created_at;
+    currentCodexTaskDraft.simulation_name = result.simulation_name;
+    currentCodexTaskDraft.title = result.title;
     saved = true;
     ui.setCodexTaskSaved({
       taskId: result.task_id,
@@ -386,10 +401,245 @@ async function loadCodexTaskHistory() {
 
   try {
     const result = await getCodexTasks({ sessionId, limit: 5 });
-    ui.setCodexTaskHistory(result.tasks ?? []);
+    const tasks = result.tasks ?? [];
+    ui.setCodexTaskHistory(tasks, selectSavedCodexTask);
   } catch (error) {
     console.warn("Failed to load Codex task history", error);
   }
+}
+
+async function selectSavedCodexTask(task, { showImplementationStatus = true } = {}) {
+  try {
+    const detail = await getCodexTask(task.task_id);
+    const savedTask = detail.task ?? task;
+    currentCodexTaskDraft = {
+      task_id: savedTask.task_id,
+      created_at: savedTask.created_at,
+      session_id: savedTask.session_id,
+      source_message: savedTask.source_message,
+      simulation_name: savedTask.simulation_name,
+      title: savedTask.title,
+      experiment_spec: savedTask.experiment_spec ?? {},
+      codex_task: savedTask.codex_task,
+    };
+    ui.showSavedCodexTask(savedTask);
+    if (detail.latest_plan) {
+      ui.setCodexTaskPlan(detail.latest_plan);
+    }
+    if (showImplementationStatus) {
+      await showCodexImplementationStatus(savedTask.task_id);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Codex依頼案の取得に失敗しました。";
+    ui.setCodexTaskStatus(message);
+    ui.addError(message);
+  }
+}
+
+async function resumeAnyCodexImplementationProgress() {
+  if (codexImplementationPollId !== null) {
+    return;
+  }
+
+  try {
+    const result = await getCodexImplementationRequests({ status: "in_progress", limit: 1 });
+    let request = result.requests?.[0];
+    if (!request) {
+      const completed = await getCodexImplementationRequests({ status: "completed", limit: 1 });
+      request = completed.requests?.[0];
+    }
+    if (!request?.task_id) {
+      return;
+    }
+    await selectSavedCodexTask(
+      {
+        task_id: request.task_id,
+        created_at: request.requested_at,
+        simulation_name: request.simulation_name,
+        title: request.title,
+      },
+      { showImplementationStatus: false }
+    );
+    const status = await getCodexImplementationStatus({ taskId: request.task_id, tailChars: 12000 });
+    ui.setCodexImplementationProgress(status);
+    if (["pending", "in_progress"].includes(status.status)) {
+      startCodexImplementationPolling(request.task_id);
+    }
+  } catch (error) {
+    console.warn("Failed to resume global Codex implementation progress", error);
+  }
+}
+
+async function showCodexImplementationStatus(taskId) {
+  const status = await getCodexImplementationStatus({ taskId, tailChars: 12000 });
+  if (status.status === "not_requested") {
+    ui.clearCodexImplementationProgress();
+    return;
+  }
+  ui.setCodexImplementationProgress(status);
+  if (["pending", "in_progress"].includes(status.status)) {
+    startCodexImplementationPolling(taskId);
+  }
+}
+
+async function previewCurrentCodexTask() {
+  if (!currentCodexTaskDraft?.task_id) {
+    ui.setCodexTaskStatus("先にCodex依頼案を保存してください。");
+    return;
+  }
+
+  ui.setCodexTaskBusy(true);
+  let plan = null;
+  try {
+    plan = await planCodexTask({
+      taskId: currentCodexTaskDraft.task_id,
+      sessionId,
+    });
+    ui.setCodexTaskStatus(plan.apply_available ? "適用可能な変更を確認しました。" : "この依頼案は限定適用の対象外です。");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Codex依頼案のプレビューに失敗しました。";
+    ui.setCodexTaskStatus(message);
+    ui.addError(message);
+  } finally {
+    ui.setCodexTaskBusy(false);
+    if (plan) {
+      ui.setCodexTaskPlan(plan);
+    }
+  }
+}
+
+async function applyCurrentCodexTask() {
+  if (!currentCodexTaskDraft?.task_id) {
+    ui.setCodexTaskStatus("先にCodex依頼案を保存してください。");
+    return;
+  }
+
+  ui.setCodexTaskBusy(true);
+  let result = null;
+  try {
+    result = await applyCodexTask({ taskId: currentCodexTaskDraft.task_id });
+    ui.setCodexTaskStatus("限定適用が完了しました。");
+    if (Object.hasOwn(viewers, result.simulation_name)) {
+      switchSimulation(result.simulation_name);
+      await loadLatestActiveSimulation();
+    }
+    await loadCodexTaskHistory();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Codex依頼案の適用に失敗しました。";
+    ui.setCodexTaskStatus(message);
+    ui.addError(message);
+  } finally {
+    ui.setCodexTaskBusy(false);
+    if (result) {
+      ui.setCodexTaskApplyResult(result);
+    }
+  }
+}
+
+async function requestCurrentCodexImplementation() {
+  if (!currentCodexTaskDraft?.task_id) {
+    ui.setCodexTaskStatus("先にCodex依頼案を保存してください。");
+    return;
+  }
+
+  ui.setCodexTaskBusy(true);
+  try {
+    const result = await requestCodexImplementation({ taskId: currentCodexTaskDraft.task_id });
+    ui.setCodexTaskStatus(`Codex実装待ちに追加しました: ${result.handoff_file}`);
+    ui.setCodexImplementationProgress({
+      status: result.status,
+      updated_at: result.requested_at,
+      output_tail: "watcherが起動中なら、まもなくCodex CLIの出力がここに表示されます。",
+    });
+    startCodexImplementationPolling(currentCodexTaskDraft.task_id);
+    await loadCodexTaskHistory();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Codex実装依頼の登録に失敗しました。";
+    ui.setCodexTaskStatus(message);
+    ui.addError(message);
+  } finally {
+    ui.setCodexTaskBusy(false);
+  }
+}
+
+function startCodexImplementationPolling(taskId) {
+  stopCodexImplementationPolling();
+  codexImplementationPollFailures = 0;
+
+  const poll = async () => {
+    try {
+      const status = await getCodexImplementationStatus({ taskId, tailChars: 12000 });
+      codexImplementationPollFailures = 0;
+      ui.setCodexImplementationProgress(status);
+      if (["completed", "failed", "not_found"].includes(status.status)) {
+        stopCodexImplementationPolling();
+        await loadCodexTaskHistory();
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Codex実装状況の取得に失敗しました。";
+      ui.setCodexTaskStatus(message);
+      codexImplementationPollFailures += 1;
+      ui.setCodexImplementationProgress({
+        status: codexImplementationPollFailures >= 3 ? "status_check_retrying" : "status_check_waiting",
+        output_tail: `${message}\nサーバーのリロード中かもしれないため、確認を続けています。`,
+      });
+    }
+  };
+
+  poll();
+  codexImplementationPollId = window.setInterval(poll, 3000);
+}
+
+function stopCodexImplementationPolling() {
+  if (codexImplementationPollId !== null) {
+    window.clearInterval(codexImplementationPollId);
+    codexImplementationPollId = null;
+  }
+  codexImplementationPollFailures = 0;
+}
+
+async function resetLabToInitialState() {
+  const shouldReset = window.confirm(
+    "3D-AI Labを初期状態に戻します。見た目の変更と最新シミュレーション結果を既定値に戻し、画面上の会話と依頼案表示をクリアします。よろしいですか？"
+  );
+  if (!shouldReset) {
+    return;
+  }
+
+  ui.setLabResetBusy(true);
+  ui.setSimulationBusy(true);
+  try {
+    await resetLabState();
+    stopCodexImplementationPolling();
+    currentCodexTaskDraft = null;
+    sessionId = null;
+    window.localStorage.removeItem(sessionKey);
+    Object.values(viewers).forEach((viewer) => {
+      viewer.setPlaying(false);
+      viewer.reset();
+      viewer.setSpeed(1);
+    });
+    resetCamera();
+    ui.resetSimulationInputs();
+    ui.resetCodexTaskPanel();
+    ui.resetChat("3D-AI Labを初期状態に戻しました。ここでは小さな3D実験の相談ができます。");
+    ui.setSpeech("初期状態に戻しました。");
+    switchSimulation("gravity_ball");
+    await loadLatestActiveSimulation();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "初期状態へのリセットに失敗しました。";
+    ui.addError(message);
+    ui.setSpeech("初期状態へのリセットに失敗しました。");
+  } finally {
+    ui.setSimulationBusy(false);
+    ui.setLabResetBusy(false);
+  }
+}
+
+function resetCamera() {
+  camera.position.set(3.6, 3.0, 6.2);
+  controls.target.set(0, 1.2, 0);
+  controls.update();
 }
 
 function formatNumber(value) {
@@ -397,21 +647,4 @@ function formatNumber(value) {
     return "-";
   }
   return Number.parseFloat(value.toFixed(3)).toString();
-}
-
-function formatExperimentSpec(spec) {
-  const parameters = spec.parameters
-    ? Object.entries(spec.parameters)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(" / ")
-    : "未設定";
-  const observations = Array.isArray(spec.observations) ? spec.observations.join("、") : "未設定";
-
-  return [
-    `実験案: ${spec.title ?? "未設定"}`,
-    `目的: ${spec.goal ?? "未設定"}`,
-    `対象: ${spec.simulation_name ?? "未設定"}`,
-    `変更できる値: ${parameters}`,
-    `観察ポイント: ${observations}`,
-  ].join("\n");
 }

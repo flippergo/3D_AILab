@@ -50,6 +50,95 @@ class CodexTaskListResponse(BaseModel):
     tasks: list[CodexTaskRecord]
 
 
+class CodexTaskPlanRequest(BaseModel):
+    session_id: str | None = Field(default=None, max_length=80)
+
+
+class CodexTaskOperation(BaseModel):
+    key: str
+    label: str
+    value: str | list[str]
+    target: str
+
+
+class CodexTaskPlanResponse(BaseModel):
+    task_id: str
+    status: str
+    simulation_name: str
+    operations: list[CodexTaskOperation]
+    affected_files: list[str]
+    warnings: list[str]
+    apply_available: bool
+
+
+class CodexTaskApplyRequest(BaseModel):
+    confirm: bool = False
+
+
+class CodexTaskApplyResponse(BaseModel):
+    application_id: str
+    applied_at: str
+    task_id: str
+    simulation_name: str
+    status: str
+    applied_operations: list[CodexTaskOperation]
+    changed_files: list[str]
+    result_summary: dict[str, Any]
+
+
+class CodexTaskImplementationRequestResponse(BaseModel):
+    request_id: str
+    requested_at: str
+    task_id: str
+    status: str
+    handoff_file: str
+    message: str
+
+
+class CodexImplementationRequestRecord(BaseModel):
+    request_id: str
+    requested_at: str
+    task_id: str
+    session_id: str
+    simulation_name: str
+    title: str
+    source_message: str
+    codex_task: str
+    experiment_spec: dict[str, Any]
+    status: str
+    handoff_file: str
+
+
+class CodexImplementationRequestListResponse(BaseModel):
+    requests: list[CodexImplementationRequestRecord]
+
+
+class CodexImplementationStatusResponse(BaseModel):
+    task_id: str
+    request_id: str | None = None
+    status: str
+    handoff_file: str | None = None
+    output_file: str | None = None
+    updated_at: str | None = None
+    exit_code: int | None = None
+    error: str | None = None
+    output_tail: str = ""
+
+
+class CodexTaskDetailResponse(BaseModel):
+    task: CodexTaskRecord
+    latest_status: str
+    latest_plan: CodexTaskPlanResponse | None = None
+    events: list[dict[str, Any]]
+
+
+class LabResetResponse(BaseModel):
+    reset_at: str
+    simulations: dict[str, dict[str, Any]]
+    changed_files: list[str]
+    message: str
+
+
 class GravityBallRunRequest(BaseModel):
     gravity: float = Field(default=9.8, gt=0, le=50)
     initial_height: float = Field(default=5.0, ge=0.6, le=12)

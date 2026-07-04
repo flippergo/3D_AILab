@@ -1,0 +1,10 @@
+{
+  "visuals": {
+    "floor_color": "#1b242d",
+    "path_color": "#45c4a0",
+    "start_color": "#65d46e",
+    "goal_color": "#ffd166",
+    "agent_color": "#72a7ff",
+    "wall_color": "#000000"
+  }
+}

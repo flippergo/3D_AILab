@@ -10,6 +10,15 @@ from typing import Any
 
 AGENT_ID = "agent_1"
 RESULT_PATH = Path(__file__).with_name("result.json")
+CUSTOMIZATION_PATH = Path(__file__).with_name("customization.json")
+DEFAULT_VISUALS = {
+    "floor_color": "#1b242d",
+    "path_color": "#45c4a0",
+    "start_color": "#65d46e",
+    "goal_color": "#ffd166",
+    "agent_color": "#72a7ff",
+    "wall_color": "#000000",
+}
 START = (0, 0)
 GOAL = (6, 6)
 WALLS = {
@@ -39,6 +48,7 @@ class MazeAgentConfig:
 
 
 def run_simulation(config: MazeAgentConfig) -> dict[str, Any]:
+    visuals = _load_visuals()
     grid_size, start, goal, walls, seed, maze_type, wall_density = _resolve_layout(config)
     steps_per_cell = _clamp_int(config.steps_per_cell, 1, 60)
     path, visited = _find_path(grid_size, start, goal, walls)
@@ -56,8 +66,9 @@ def run_simulation(config: MazeAgentConfig) -> dict[str, Any]:
                 "seed": seed,
                 "wall_density": wall_density,
             },
+            "visuals": visuals,
         },
-        "objects": _build_objects(grid_size, start, goal, walls, path),
+        "objects": _build_objects(grid_size, start, goal, walls, path, visuals),
         "frames": frames,
         "summary": {
             "maze_type": maze_type,
@@ -87,7 +98,7 @@ def load_result(path: Path = RESULT_PATH) -> dict[str, Any]:
         return result
 
     result = json.loads(path.read_text(encoding="utf-8"))
-    if not result.get("frames"):
+    if not result.get("frames") or not result.get("meta", {}).get("visuals"):
         result = run_simulation(MazeAgentConfig())
         write_result(result, path)
     return json.loads(path.read_text(encoding="utf-8"))
@@ -251,6 +262,7 @@ def _build_objects(
     goal: tuple[int, int],
     walls: set[tuple[int, int]],
     path: list[tuple[int, int]],
+    visuals: dict[str, str],
 ) -> list[dict[str, Any]]:
     objects: list[dict[str, Any]] = [
         {
@@ -258,31 +270,31 @@ def _build_objects(
             "type": "maze_floor",
             "grid_size": grid_size,
             "tile_size": 1,
-            "color": "#1b242d",
+            "color": visuals["floor_color"],
         },
         {
             "id": "maze_path",
             "type": "path",
             "cells": [list(cell) for cell in path],
-            "color": "#45c4a0",
+            "color": visuals["path_color"],
         },
         {
             "id": "start",
             "type": "marker",
             "cell": list(start),
-            "color": "#65d46e",
+            "color": visuals["start_color"],
         },
         {
             "id": "goal",
             "type": "marker",
             "cell": list(goal),
-            "color": "#ffd166",
+            "color": visuals["goal_color"],
         },
         {
             "id": AGENT_ID,
             "type": "agent",
             "radius": 0.22,
-            "color": "#72a7ff",
+            "color": visuals["agent_color"],
         },
     ]
 
@@ -293,7 +305,7 @@ def _build_objects(
                 "type": "wall",
                 "cell": list(cell),
                 "height": 0.76,
-                "color": "#566273",
+                "color": visuals["wall_color"],
             }
         )
 
@@ -319,6 +331,20 @@ def _normalize_grid_size(value: int) -> int:
     if grid_size % 2 == 0:
         grid_size += 1 if grid_size < 11 else -1
     return grid_size
+
+
+def _load_visuals(path: Path = CUSTOMIZATION_PATH) -> dict[str, str]:
+    visuals = DEFAULT_VISUALS.copy()
+    if not path.exists():
+        return visuals
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return visuals
+    for key, value in (data.get("visuals") or {}).items():
+        if key in visuals and isinstance(value, str):
+            visuals[key] = value
+    return visuals
 
 
 if __name__ == "__main__":

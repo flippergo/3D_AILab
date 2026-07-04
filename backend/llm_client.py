@@ -32,16 +32,17 @@ if load_dotenv is not None:
 @dataclass(frozen=True)
 class LabAssistantResponse:
     reply: str
-    experiment_spec: dict[str, Any]
+    experiment_spec: dict[str, Any] | None
     codex_task: str | None
     assistant_notes: list[str]
     suggested_action: str | None = None
     simulation_params: dict[str, float | int | bool] | None = None
+    use_openai: bool = True
 
 
 def generate_lab_assistant_response(message: str, session_id: str) -> LabAssistantResponse:
     rule_response = _generate_rule_based_response(message=message, session_id=session_id)
-    if not _openai_enabled():
+    if not rule_response.use_openai or not _openai_enabled():
         return rule_response
 
     openai_reply = _generate_openai_reply(
@@ -71,40 +72,86 @@ def generate_lab_assistant_response(message: str, session_id: str) -> LabAssista
 def _generate_rule_based_response(message: str, session_id: str) -> LabAssistantResponse:
     cleaned = message.strip()
     if not cleaned:
-        spec = _default_experiment_spec()
         return LabAssistantResponse(
             reply="まずは試したいことを一文で入力してみましょう。",
-            experiment_spec=spec,
+            experiment_spec=None,
             codex_task=None,
             assistant_notes=["入力が空だったため、最小の実験案を返しました。"],
         )
 
     normalized = unicodedata.normalize("NFKC", cleaned).lower()
+    if _looks_like_confirmation(normalized):
+        pending_spec = _load_pending_experiment_spec(session_id)
+        if pending_spec:
+            return LabAssistantResponse(
+                reply=(
+                    "分かりました。この内容でCodex向けの実装依頼案を作りました。"
+                    "内容を確認して、必要なら保存・コピーしてください。"
+                ),
+                experiment_spec=pending_spec,
+                codex_task=build_codex_task(pending_spec),
+                assistant_notes=["確認を受けてCodex依頼案を作成しました。"],
+            )
+        return LabAssistantResponse(
+            reply="どの機能やシミュレーションを作るか、もう少し具体的に教えてください。",
+            experiment_spec=None,
+            codex_task=None,
+            assistant_notes=["確認対象が見つからなかったため、追加説明を依頼しました。"],
+        )
+
+    if _looks_like_existing_simulation_change(normalized):
+        spec = _existing_simulation_change_spec(cleaned, normalized)
+        is_visual_customization = _looks_like_visual_customization(normalized)
+        return LabAssistantResponse(
+            reply=_existing_simulation_change_reply(is_visual_customization),
+            experiment_spec=spec,
+            codex_task=build_codex_task(spec),
+            assistant_notes=_existing_simulation_change_notes(is_visual_customization),
+        )
+
+    if _looks_like_ui_change_request(normalized):
+        spec = _app_ui_feature_spec(cleaned)
+        return LabAssistantResponse(
+            reply=(
+                "3D-AI Labの画面や操作UIの変更として整理しました。"
+                "Codex向けの依頼案を作ったので、内容を確認して必要なら保存・コピーしてください。"
+            ),
+            experiment_spec=spec,
+            codex_task=build_codex_task(spec),
+            assistant_notes=["UI変更依頼として返しました。"],
+        )
+
+    if _looks_like_current_info_question(normalized):
+        return LabAssistantResponse(
+            reply=(
+                "わたしは、インターネットや外部のリアルタイム情報を参照していないので、その現在値を確定して答えられません。"
+                "必要なら、その情報を画面に表示するUI機能追加の依頼案を作れます。"
+            ),
+            experiment_spec=None,
+            codex_task=None,
+            assistant_notes=["リアルタイム情報に関する一般質問として返しました。"],
+        )
+
     if _looks_like_general_lab_question(normalized):
-        spec = _default_experiment_spec()
         return LabAssistantResponse(
             reply=(
                 "今は gravity_ball, maze_agent, flocking を試せます。"
                 "重力や高さを変える、迷路をランダム生成する、群れの個体数やまとまりを変える、といった指示をチャットから送れます。"
             ),
-            experiment_spec=spec,
+            experiment_spec=None,
             codex_task=None,
             assistant_notes=["一般的な使い方案内として返しました。"],
         )
 
-    if _looks_like_existing_simulation_change(normalized):
-        spec = _existing_simulation_change_spec(cleaned, normalized)
+    if _looks_like_general_conversation(normalized):
         return LabAssistantResponse(
             reply=(
-                "既存シミュレーションの変更案として整理しました。"
-                "Phase 6aでは自動実装せず、Codex依頼案を確認・保存・コピーできる形で用意します。"
+                "私は3D-AI Labのラボ助手です。"
+                "質問に答えたり、既存シミュレーションの使い方を案内したり、実装依頼を整理したりできます。"
             ),
-            experiment_spec=spec,
-            codex_task=build_codex_task(spec),
-            assistant_notes=[
-                "Phase 6aではCodex依頼案を作るだけで、ソースコードの変更は行いません。",
-                "実装する場合は、人間が内容を確認してからCodexに渡します。",
-            ],
+            experiment_spec=None,
+            codex_task=None,
+            assistant_notes=["一般的な会話として返しました。"],
         )
 
     if _looks_like_gravity_ball(normalized):
@@ -117,7 +164,7 @@ def _generate_rule_based_response(message: str, session_id: str) -> LabAssistant
             codex_task=build_codex_task(spec),
             assistant_notes=[
                 "ルールベースで実行条件を抽出しました。",
-                "gravity_ball はPhase 4〜5で実装済みのため、実行可能なアクションも返します。",
+                "gravity_ball は実行可能なため、実行アクションも返します。",
             ],
             suggested_action="run_gravity_ball",
             simulation_params=params or None,
@@ -131,7 +178,7 @@ def _generate_rule_based_response(message: str, session_id: str) -> LabAssistant
             experiment_spec=spec,
             codex_task=build_codex_task(spec),
             assistant_notes=[
-                "flocking はPhase 7bとして実行可能です。",
+                "flocking は実行可能です。",
                 "強化学習ではなく、Boids風のルールベースシミュレーションとして実行します。",
             ],
             suggested_action="run_flocking",
@@ -145,13 +192,13 @@ def _generate_rule_based_response(message: str, session_id: str) -> LabAssistant
         return LabAssistantResponse(
             reply=(
                 "迷路エージェントの実験案に分解しました。"
-                "Phase 7aでは強化学習ではなく軽量探索で、スタートからゴールへ進む様子を実行して表示します。"
+                "現在は強化学習ではなく軽量探索で、スタートからゴールへ進む様子を実行して表示します。"
             ),
             experiment_spec=spec,
             codex_task=build_codex_task(spec),
             assistant_notes=[
-                "maze_agent はPhase 7aとして実行可能です。",
-                "強化学習は後続フェーズで扱い、今回は固定迷路のBFS系探索として実行します。"
+                "maze_agent は実行可能です。",
+                "強化学習は今後の拡張候補として扱い、今回は固定迷路のBFS系探索として実行します。"
                 if wants_learning
                 else "今回は固定迷路のBFS系探索として実行します。",
             ],
@@ -166,18 +213,27 @@ def _generate_rule_based_response(message: str, session_id: str) -> LabAssistant
             },
         )
 
+    if not _looks_like_simulation_creation_request(normalized):
+        return LabAssistantResponse(
+            reply="質問や相談として受け取りました。必要なら、UI変更かシミュレーション依頼として整理することもできます。",
+            experiment_spec=None,
+            codex_task=None,
+            assistant_notes=["一般的な会話として返しました。"],
+        )
+
     spec = _generic_experiment_spec(cleaned)
     return LabAssistantResponse(
         reply=(
-            "実験案として整理しました。Phase 6aではまだ実行せず、Codex依頼案として確認できるようにします。"
-            "まずは登場物、動き、変更できる値、観察したい結果を1つずつ決めると、3Dシミュレーションにしやすくなります。"
+            f"「{cleaned}」のシミュレーションを実装する依頼案を作りますか？"
+            "作る場合は「はい」または「お願いします」と入力してください。"
         ),
         experiment_spec=spec,
-        codex_task=build_codex_task(spec),
+        codex_task=None,
         assistant_notes=[
-            "未対応の題材のため、今は実行せずCodex向けタスク案として返します。",
-            "Phase 6以降で、このタスク案を実装依頼に使えます。",
+            "未対応の題材のため、実装依頼案を作る前に確認待ちにしました。",
+            "シミュレーション実装確認待ち",
         ],
+        use_openai=False,
     )
 
 
@@ -234,15 +290,23 @@ def _read_timeout_seconds() -> float:
 
 def _openai_system_prompt() -> str:
     return """あなたは3D-AI Labのラボ助手です。
-学生に一方的に講義する先生ではなく、学生の「試したいこと」を小さな3D実験に分解して一緒に考える助手として振る舞ってください。
+学生に一方的に講義する先生ではなく、学生の質問や「試したいこと」を一緒に整理する助手として振る舞ってください。
 
 重要な制約:
 - 返答は日本語で、初心者向けに短く具体的にしてください。
+- ユーザーが一般的な会話や質問をしている場合は、無理に3D実験やシミュレーションへ変換せず、普通に答えてください。
+- まず「一般会話」「3D-AI LabのUI変更」「シミュレーション依頼」のどれかとして考えてください。
+- 日付、時刻、天気、気温、湿度、風速などの現在値を聞かれた場合は一般会話として扱い、現在値を推測したり断定したりせず、わたしはインターネットや外部のリアルタイム情報を参照していないため確定して答えられない、と一人称で答えてください。
+- 日付、時刻、天気、気温、湿度、風速などを画面に表示する機能追加を明確に依頼された場合は、一般質問として断らず、3D-AI LabのUI変更としてCodex向け依頼案を用意したことを伝えてください。
+- 画面、パネル、ボタン、チャット欄などの変更依頼は、シミュレーションではなく3D-AI LabのUI変更として扱ってください。
+- 新しいシミュレーションや大きな実装依頼は、ユーザーが明確に確認する前に実装案を確定したように言わないでください。
 - 実行可能な既存シミュレーションは gravity_ball, maze_agent, flocking です。
-- Phase 6aではCodex依頼案を作成・保存・コピーできるだけで、自動実装やソースコード変更は行いません。
+- 既存シミュレーションの色や表示設定など、許可済みの小改造だけを確認後に限定適用できます。
+- 新規シミュレーション作成、自由なコード編集、Git操作、任意コマンド実行は行いません。
 - APIキー、内部実装、環境変数の値は説明しないでください。
 - 返答は自然文だけにしてください。JSONやMarkdown表は不要です。
 - 既存の構造化判定結果に反するアクションを約束しないでください。
+- 内部の開発段階名や番号は、ユーザーへの返答に出さないでください。
 """
 
 
@@ -254,19 +318,76 @@ def _build_openai_user_context(
 ) -> str:
     context = {
         "student_message": message,
-        "recent_conversation": _load_recent_session_context(session_id),
+        "intent": _intent_label(message, rule_response),
+        "available_capabilities": _available_capabilities_for_openai(),
+        "recent_conversation": _recent_context_for_openai(session_id, rule_response),
+        "draft_reply": rule_response.reply,
         "structured_interpretation": {
             "suggested_action": rule_response.suggested_action,
             "simulation_params": rule_response.simulation_params,
             "experiment_spec": rule_response.experiment_spec,
+            "codex_task": rule_response.codex_task,
             "assistant_notes": rule_response.assistant_notes,
         },
         "reply_goal": (
             "上の構造化判定を踏まえて、学生に次の一歩が分かる短い返答をしてください。"
+            "draft_reply は現在の質問に対する基準回答です。内容の種類、対象、制約を変えず、必要なら表現だけ自然に整えてください。"
+            "直近の会話より現在の student_message と structured_interpretation を優先し、現在の依頼に含まれない過去の機能案やCodex依頼案を持ち出さないでください。"
+            "intent が capability_question なら、リアルタイム情報の制限ではなく、available_capabilities と draft_reply を参照して3D-AI Labでできることを答えてください。"
+            "experiment_spec が null の場合は一般会話として自然に答え、実験案やCodex依頼案に無理に誘導しないでください。"
+            "assistant_notes に「リアルタイム情報に関する一般質問」がある場合は、現在値を推測せず、structured_interpretation の方針を自然な一人称の文章に整えてください。"
+            "assistant_notes に「UI変更依頼」がある場合は、シミュレーション実行ではなくCodex向け依頼案を用意したことを短く伝えてください。"
             "実行可能な場合は何が実行されるかを伝え、未実装や改造案の場合はCodex依頼案として確認できることを伝えてください。"
         ),
     }
     return json.dumps(context, ensure_ascii=False)
+
+
+def _intent_label(message: str, rule_response: LabAssistantResponse) -> str:
+    normalized = unicodedata.normalize("NFKC", message.strip()).lower()
+    notes = " ".join(rule_response.assistant_notes)
+    if _looks_like_capability_question(normalized):
+        return "capability_question"
+    if "UI変更依頼" in notes:
+        return "ui_change_request"
+    if "リアルタイム情報に関する一般質問" in notes:
+        return "general_realtime_info_question"
+    if rule_response.suggested_action:
+        return "runnable_simulation"
+    if rule_response.experiment_spec and not rule_response.codex_task:
+        return "simulation_request_pending_confirmation"
+    if rule_response.codex_task:
+        return "codex_task_draft"
+    return "general_conversation"
+
+
+def _available_capabilities_for_openai() -> list[str]:
+    return [
+        "3D空間でラボ助手アバターとシミュレーションを表示できます。",
+        "gravity_ball で重力、初期高さ、反発係数を変えてボールの落下と反発を観察できます。",
+        "maze_agent で固定迷路またはランダム迷路をエージェントが進む様子を再生できます。",
+        "flocking で複数エージェントのBoids風の群れ行動を観察できます。",
+        "チャットから既存シミュレーションの条件変更や実行を依頼できます。",
+        "画面や操作UIの変更依頼はCodex向け依頼案として整理し、保存・コピーできます。",
+        "未対応の新規シミュレーション依頼は、実装依頼案を作る前に確認を取ります。",
+        "既存シミュレーションの色など、許可済みの小改造はプレビュー後に限定適用できます。",
+        "初期状態ボタンで見た目変更、最新結果、画面上の操作状態を既定値に戻せます。",
+    ]
+
+
+def _recent_context_for_openai(session_id: str, rule_response: LabAssistantResponse) -> list[dict[str, str]]:
+    notes = " ".join(rule_response.assistant_notes)
+    if any(
+        marker in notes
+        for marker in [
+            "一般的な使い方案内",
+            "一般的な会話",
+            "リアルタイム情報に関する一般質問",
+            "UI変更依頼",
+        ]
+    ):
+        return []
+    return _load_recent_session_context(session_id)
 
 
 def _extract_response_text(response: Any) -> str | None:
@@ -315,7 +436,130 @@ def _load_recent_session_context(session_id: str, limit: int = 6) -> list[dict[s
     return records[-limit:]
 
 
+def _load_pending_experiment_spec(session_id: str) -> dict[str, Any] | None:
+    safe_session_id = SESSION_ID_PATTERN.sub("_", session_id.strip())[:80] if session_id else ""
+    if not safe_session_id:
+        return None
+
+    log_path = SESSION_LOG_DIR / f"session_{safe_session_id}.jsonl"
+    if not log_path.exists():
+        return None
+
+    try:
+        lines = log_path.read_text(encoding="utf-8").splitlines()[-8:]
+    except OSError:
+        return None
+
+    for line in reversed(lines):
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        notes = record.get("assistant_notes") or []
+        spec = record.get("experiment_spec")
+        if isinstance(spec, dict) and "シミュレーション実装確認待ち" in notes:
+            return spec
+    return None
+
+
+def _looks_like_confirmation(message: str) -> bool:
+    return message.strip() in {
+        "はい",
+        "お願い",
+        "お願いします",
+        "作って",
+        "作成して",
+        "実装して",
+        "進めて",
+        "ok",
+        "yes",
+        "y",
+    }
+
+
+def _looks_like_current_info_question(message: str) -> bool:
+    if not _looks_like_question(message):
+        return False
+    current_markers = ["今日", "明日", "現在", "いま", "今", "最新", "このあと", "today", "tomorrow", "current", "now"]
+    info_targets = [
+        "日付",
+        "日時",
+        "時刻",
+        "時間",
+        "何時",
+        "何日",
+        "何月",
+        "何曜日",
+        "天気",
+        "気温",
+        "湿度",
+        "風速",
+        "風向",
+        "降水",
+        "雨",
+        "雪",
+        "気圧",
+        "花粉",
+        "為替",
+        "株価",
+        "ニュース",
+        "date",
+        "time",
+        "weather",
+        "temperature",
+        "humidity",
+        "wind",
+        "news",
+    ]
+    return any(keyword in message for keyword in current_markers) and any(keyword in message for keyword in info_targets)
+
+
+def _looks_like_ui_change_request(message: str) -> bool:
+    if _mentions_existing_simulation(message):
+        return False
+    ui_keywords = [
+        "ui",
+        "画面",
+        "パネル",
+        "ボタン",
+        "チャット欄",
+        "吹き出し",
+        "入力欄",
+        "ヘッダー",
+        "サイドバー",
+        "ラボ画面",
+    ]
+    display_info_keywords = [
+        "日付",
+        "日時",
+        "時刻",
+        "時間",
+        "時計",
+        "天気",
+        "気温",
+        "湿度",
+        "風速",
+        "風向",
+        "降水",
+        "気圧",
+        "ニュース",
+        "date",
+        "time",
+        "weather",
+        "temperature",
+        "humidity",
+        "wind",
+    ]
+    feature_keywords = ["表示", "追加", "機能", "実装", "つけ", "付け", "入れ", "作", "変更", "改造", "戻す", "出し"]
+    has_ui_target = any(keyword in message for keyword in ui_keywords)
+    has_display_target = any(keyword in message for keyword in display_info_keywords)
+    has_feature_action = any(keyword in message for keyword in feature_keywords)
+    return has_feature_action and (has_ui_target or has_display_target)
+
+
 def _looks_like_general_lab_question(message: str) -> bool:
+    if _looks_like_capability_question(message):
+        return True
     return any(
         keyword in message
         for keyword in [
@@ -332,6 +576,65 @@ def _looks_like_general_lab_question(message: str) -> bool:
     )
 
 
+def _looks_like_capability_question(message: str) -> bool:
+    return any(
+        keyword in message
+        for keyword in [
+            "何ができ",
+            "なにができ",
+            "できること",
+            "何を試",
+            "なにを試",
+            "どんなこと",
+            "機能一覧",
+            "help",
+            "ヘルプ",
+        ]
+    )
+
+
+def _looks_like_general_conversation(message: str) -> bool:
+    if _mentions_existing_simulation(message):
+        return _looks_like_question(message) and not _looks_like_existing_simulation_change(message)
+
+    if any(
+        keyword in message
+        for keyword in [
+            "あなたは誰",
+            "君は誰",
+            "お前は誰",
+            "自己紹介",
+            "who are you",
+            "何者",
+            "ありがとう",
+            "thanks",
+            "こんばんは",
+            "おはよう",
+            "さようなら",
+        ]
+    ):
+        return True
+
+    return _looks_like_question(message) and not _looks_like_simulation_creation_request(message)
+
+
+def _looks_like_question(message: str) -> bool:
+    return any(
+        keyword in message
+        for keyword in ["?", "？", "とは", "何", "なに", "誰", "どう", "なぜ", "教えて", "教え", "説明", "わかり", "分かり", "知り"]
+    )
+
+
+def _looks_like_simulation_creation_request(message: str) -> bool:
+    return any(keyword in message for keyword in ["シミュレーション", "simulation", "実験", "3d"]) and any(
+        keyword in message for keyword in ["作", "実装", "追加", "生成", "表示", "動か"]
+    )
+
+
+def _mentions_existing_simulation(message: str) -> bool:
+    return any(keyword in message for keyword in ["gravity_ball", "maze_agent", "flocking", "ボール", "迷路", "群れ", "鳥", "魚"])
+
+
 def _looks_like_gravity_ball(message: str) -> bool:
     return any(
         keyword in message
@@ -341,7 +644,31 @@ def _looks_like_gravity_ball(message: str) -> bool:
 
 def _looks_like_existing_simulation_change(message: str) -> bool:
     simulation_keywords = ["gravity_ball", "maze_agent", "flocking", "ボール", "迷路", "群れ", "鳥", "魚"]
-    change_keywords = ["改造", "変更", "追加", "実装", "作って", "作りたい", "色", "表示", "ログ", "readme", "機能"]
+    change_keywords = [
+        "改造",
+        "変更",
+        "追加",
+        "拡張",
+        "実装",
+        "作って",
+        "作りたい",
+        "色",
+        "赤",
+        "青",
+        "緑",
+        "黄色",
+        "白",
+        "黒",
+        "見た目",
+        "表示",
+        "ログ",
+        "readme",
+        "機能",
+        "学習",
+        "強化学習",
+        "報酬",
+        "障害物",
+    ]
     parameter_only_keywords = ["重力", "高さ", "反発", "個体", "まとまり", "向き合わせ", "距離確保", "ランダム"]
     if not any(keyword in message for keyword in simulation_keywords):
         return False
@@ -352,6 +679,52 @@ def _looks_like_existing_simulation_change(message: str) -> bool:
     ):
         return False
     return True
+
+
+def _looks_like_visual_customization(message: str) -> bool:
+    return any(
+        keyword in message
+        for keyword in [
+            "色",
+            "赤",
+            "青",
+            "緑",
+            "黄色",
+            "白",
+            "黒",
+            "見た目",
+            "表示",
+            "床",
+            "壁",
+            "軌跡",
+            "境界",
+            "パレット",
+        ]
+    )
+
+
+def _existing_simulation_change_reply(is_visual_customization: bool) -> str:
+    if is_visual_customization:
+        return (
+            "既存シミュレーションの見た目変更として整理しました。"
+            "プレビューで内容を確認してから、許可された範囲だけ限定適用できます。"
+        )
+    return (
+        "既存シミュレーションの拡張依頼として整理しました。"
+        "この内容はCodex向けの依頼案として確認できます。自動で適用できるのは、今のところ見た目変更などの安全な小改造だけです。"
+    )
+
+
+def _existing_simulation_change_notes(is_visual_customization: bool) -> list[str]:
+    if is_visual_customization:
+        return [
+            "許可済みの見た目変更だけを、プレビュー後に適用できます。",
+            "新規シミュレーション作成や自由なコード編集は、今後の拡張または手動Codex依頼の範囲です。",
+        ]
+    return [
+        "機能拡張の依頼案として整理しました。",
+        "自動適用できるのは、現時点では見た目変更などの安全な小改造だけです。",
+    ]
 
 
 def _extract_gravity_ball_params(message: str) -> dict[str, float | int | bool]:
@@ -429,7 +802,7 @@ def _gravity_ball_spec(message: str, params: dict[str, float | int | bool]) -> d
             "bounce": params.get("bounce", "変更可能"),
         },
         "observations": ["落下速度", "跳ね返り回数", "最高到達点", "静止に近づく様子"],
-        "phase": "Phase 4-5 実行可能",
+        "status": "実行可能",
     }
 
 
@@ -449,7 +822,7 @@ def _maze_agent_spec(message: str) -> dict[str, Any]:
             "show_search": "探索過程表示の候補",
         },
         "observations": ["壁を避ける経路", "ゴール到達までのステップ数", "最終フレームの到達位置"],
-        "phase": "Phase 7a 実行可能",
+        "status": "実行可能",
     }
 
 
@@ -468,7 +841,7 @@ def _flocking_spec(message: str, params: dict[str, float | int | bool]) -> dict[
             "seed": "任意",
         },
         "observations": ["群れのまとまり", "個体間距離", "進行方向の揃い方", "パラメータ変更による軌道の違い"],
-        "phase": "Phase 7b 実行可能",
+        "status": "実行可能",
     }
 
 
@@ -496,7 +869,7 @@ def _existing_simulation_change_spec(message: str, normalized: str) -> dict[str,
             "scope": "既存シミュレーションの小改造",
         },
         "observations": ["変更前後で見た目または挙動がどう変わったか", "既存の実行・再生が壊れていないか"],
-        "phase": "Phase 6a Codex依頼案",
+        "status": "Codex依頼案",
     }
 
 
@@ -513,7 +886,69 @@ def _generic_experiment_spec(message: str) -> dict[str, Any]:
             "duration": "観察時間",
         },
         "observations": ["何が変化したか", "どのパラメータが結果に効いたか", "次に変えたい条件"],
-        "phase": "Phase 6以降の実装候補",
+        "status": "今後の実装候補",
+    }
+
+
+def _date_time_display_feature_spec(message: str) -> dict[str, Any]:
+    return {
+        "title": "ラボ画面の日付・時刻表示",
+        "simulation_name": "lab_ui",
+        "goal": "3D-AI Labの画面上で現在の日付と時刻を確認できるようにする",
+        "objects": ["3D画面またはヘッダー上の小さな日時表示UI"],
+        "parameters": {
+            "scope": "アプリUI機能追加",
+            "source_message": message,
+            "display_format": "日本語環境で読みやすい日付と時刻",
+            "update_interval": "1秒または1分ごとに更新",
+        },
+        "observations": [
+            "画面を見れば現在の日時が分かる",
+            "チャット欄やシミュレーション操作UIを邪魔しない",
+            "リロード後も自然に表示される",
+        ],
+        "status": "Codex依頼案",
+    }
+
+
+def _weather_display_feature_spec(message: str) -> dict[str, Any]:
+    return {
+        "title": "ラボ画面の天気表示",
+        "simulation_name": "lab_ui",
+        "goal": "3D-AI Labの画面上で天気情報を確認できるようにする",
+        "objects": ["3D画面またはヘッダー上の小さな天気表示UI"],
+        "parameters": {
+            "scope": "アプリUI機能追加",
+            "source_message": message,
+            "data_source": "外部天気APIまたは手入力の候補。APIキーや通信仕様は実装前に確認する",
+            "display_format": "地域、天気、気温、更新時刻を読みやすく表示",
+        },
+        "observations": [
+            "画面を見れば天気情報の有無が分かる",
+            "API未設定時に分かりやすい案内を表示する",
+            "チャット欄やシミュレーション操作UIを邪魔しない",
+        ],
+        "status": "Codex依頼案",
+    }
+
+
+def _app_ui_feature_spec(message: str) -> dict[str, Any]:
+    return {
+        "title": "3D-AI Lab UI機能追加",
+        "simulation_name": "lab_ui",
+        "goal": f"学生の入力「{message}」に基づき、3D-AI Labの画面や操作UIを改善する",
+        "objects": ["既存の3D画面", "右側パネル", "チャット欄", "必要なUI部品"],
+        "parameters": {
+            "scope": "アプリUI機能追加",
+            "source_message": message,
+            "safety": "既存の3D表示、チャット、シミュレーション操作を壊さない",
+        },
+        "observations": [
+            "画面上で変更内容が確認できる",
+            "既存の操作が維持される",
+            "狭い画面でもUIが重ならない",
+        ],
+        "status": "Codex依頼案",
     }
 
 
@@ -525,7 +960,7 @@ def _default_experiment_spec() -> dict[str, Any]:
         "objects": ["ボール", "床"],
         "parameters": {"gravity": "変更可能", "initial_height": "変更可能", "bounce": "変更可能"},
         "observations": ["落下速度", "跳ね返り"],
-        "phase": "Phase 4-5 実行可能",
+        "status": "実行可能",
     }
 
 

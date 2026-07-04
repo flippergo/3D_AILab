@@ -8,5 +8,9 @@ __pycache__/
 logs/sessions/*.jsonl
 logs/experiments/*.jsonl
 logs/codex_tasks/*.jsonl
+logs/codex_tasks/pending_implementation/*.md
+logs/codex_tasks/watcher_state.json
+logs/codex_tasks/watcher_outputs/*.log
+logs/codex_tasks/watcher.lock
 output/playwright/
 .uvicorn*.log

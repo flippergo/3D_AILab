@@ -1,0 +1,10 @@
+{
+  "visuals": {
+    "agent_palette": [
+      "#8fd3ff",
+      "#ffd166",
+      "#45c4a0"
+    ],
+    "bounds_color": "#45c4a0"
+  }
+}

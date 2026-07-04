@@ -85,18 +85,43 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       }
 
+      .lab-reset-button {
+        position: absolute;
+        left: 18px;
+        bottom: 18px;
+        min-width: 112px;
+        height: 38px;
+        border: 1px solid rgba(242, 245, 247, 0.2);
+        border-radius: 8px;
+        padding: 0 14px;
+        background: rgba(16, 19, 24, 0.78);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+      }
+
+      .lab-reset-button:hover {
+        border-color: rgba(69, 196, 160, 0.62);
+      }
+
+      .lab-reset-button:disabled {
+        cursor: wait;
+        opacity: 0.62;
+      }
+
       .chat-panel {
         display: grid;
         --simulation-panel-height: 250px;
-        --codex-task-panel-height: 180px;
+        --codex-task-panel-height: 260px;
         display: grid;
         grid-template-rows:
           auto
           minmax(96px, var(--simulation-panel-height))
           8px
-          minmax(72px, var(--codex-task-panel-height))
-          8px
-          minmax(96px, 1fr)
+          minmax(120px, 1fr)
           auto;
         min-width: 0;
         min-height: 0;
@@ -123,13 +148,28 @@
         line-height: 1.45;
       }
 
-      .chat-log {
+      .current-datetime {
         display: flex;
-        flex-direction: column;
-        gap: 10px;
-        min-height: 0;
-        padding: 16px;
-        overflow-y: auto;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(69, 196, 160, 0.28);
+      }
+
+      .current-datetime span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .current-datetime time {
+        min-width: 0;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
       }
 
       .simulation-panel {
@@ -315,9 +355,56 @@
         color: #07110e;
       }
 
+      #requestCodexImplementationButton {
+        grid-column: 1 / -1;
+      }
+
       .codex-task-actions button:disabled {
         cursor: wait;
         opacity: 0.58;
+      }
+
+      .codex-task-plan {
+        display: grid;
+        gap: 6px;
+        border: 1px solid rgba(69, 196, 160, 0.2);
+        border-radius: 8px;
+        padding: 10px;
+        background: rgba(69, 196, 160, 0.07);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .codex-task-plan strong {
+        color: var(--text);
+      }
+
+      .codex-implementation-progress {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid rgba(69, 196, 160, 0.24);
+        border-radius: 8px;
+        background: rgba(9, 14, 20, 0.62);
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .codex-implementation-progress pre {
+        max-height: 150px;
+        margin: 0;
+        padding: 8px;
+        overflow: auto;
+        border-radius: 6px;
+        background: #080c11;
+        color: #cfd8e3;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 11px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
       }
 
       .codex-task-history {
@@ -328,9 +415,23 @@
       }
 
       .codex-task-history-item {
+        width: 100%;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 8px;
+        background: #111720;
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+        text-align: left;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .codex-task-history-item:hover {
+        border-color: rgba(69, 196, 160, 0.35);
+        color: var(--text);
       }
 
       .panel-resizer {
@@ -471,12 +572,17 @@
       <section class="stage" aria-label="3D lab space">
         <canvas id="scene"></canvas>
         <div id="speechBubble" class="bubble">こんにちは。3D-AI Labのラボ助手です。まずは試したいことを入力してください。</div>
+        <button id="labResetButton" class="lab-reset-button" type="button">初期状態</button>
       </section>
 
       <aside class="chat-panel" aria-label="Lab assistant chat">
         <header class="chat-header">
           <h1>3D-AI Lab</h1>
           <p>入力した内容はFastAPIに送信され、仮応答がログに保存されます。</p>
+          <div class="current-datetime">
+            <span>現在日時</span>
+            <time id="currentDateTime" datetime="" aria-live="polite">読み込み中</time>
+          </div>
         </header>
 
         <section class="simulation-panel" aria-label="simulation controls">
@@ -596,20 +702,15 @@
             <div class="codex-task-actions">
               <button id="saveCodexTaskButton" type="button">保存</button>
               <button id="copyCodexTaskButton" type="button">コピー</button>
+              <button id="previewCodexTaskButton" type="button">プレビュー</button>
+              <button id="applyCodexTaskButton" type="button">適用</button>
+              <button id="requestCodexImplementationButton" type="button">実装依頼</button>
             </div>
+            <div id="codexTaskPlan" class="codex-task-plan" hidden></div>
+            <div id="codexImplementationProgress" class="codex-implementation-progress" hidden></div>
           </div>
           <div id="codexTaskHistory" class="codex-task-history" aria-live="polite"></div>
         </section>
-        <div
-          id="codexTaskPanelResizer"
-          class="panel-resizer"
-          role="separator"
-          aria-label="Codex依頼案欄の高さ調整"
-          aria-orientation="horizontal"
-        ></div>
-
-        <div id="chatLog" class="chat-log" aria-live="polite"></div>
-
         <form id="chatForm" class="chat-form">
           <input
             id="messageInput"
@@ -633,6 +734,7 @@
         }
       }
     </script>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/current_datetime.js?v=20260704-progress-sync2"></script>
+    <script type="module" src="/src/main.js?v=20260704-progress-sync2"></script>
   </body>
 </html>
