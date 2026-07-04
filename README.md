@@ -3,7 +3,8 @@
 3D-AI Lab は、学生向けの小さなAI入門ツールです。
 このMVPでは、ブラウザ上の3D空間、ラボ助手チャット、FastAPI連携、会話ログ保存に加えて、Phase 4〜5 の `gravity_ball`、Phase 7a の `maze_agent`、Phase 7b の `flocking` シミュレーションを実行・再生できます。
 
-現時点ではAPIキーや外部LLMサービスは使いません。
+APIキーなしでもルールベース版のラボ助手として動きます。
+`.env` に `OPENAI_API_KEY` を設定した場合は、OpenAI APIを使った自然なラボ助手応答に切り替わります。
 
 ## 実装済みの機能
 
@@ -13,6 +14,7 @@
 - 会話ログを `logs/sessions/` に JSONL 形式で保存する
 - APIキーなしのルールベース版ラボ助手が、学生の入力を実験案に分解する
 - Codex向けタスク案を生成する
+- Codex向けタスク案を確認・保存・コピーできる
 - `gravity_ball` を実行し、`result.json` を生成する
 - 生成されたボールの落下・反発シミュレーションを3D空間で再生する
 - `maze_agent` を実行し、固定迷路をエージェントが進む様子を3D空間で再生する
@@ -73,6 +75,27 @@ http://127.0.0.1:8000/
 ```powershell
 uvicorn backend.app:app --reload
 ```
+
+## OpenAI APIを使う場合
+
+OpenAI APIを使う場合は、プロジェクト直下に `.env` を作成します。
+`.env` はGit管理対象外です。
+
+```env
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
+OPENAI_MODEL=gpt-4.1-mini
+OPENAI_ENABLED=true
+OPENAI_TIMEOUT_SECONDS=20
+```
+
+設定後、FastAPIサーバを再起動してください。
+
+```powershell
+python -m uvicorn backend.app:app --reload
+```
+
+APIキーがない、`OPENAI_ENABLED=false`、API呼び出しに失敗した、依存関係が未インストール、のいずれかの場合は、従来のルールベース応答に自動で戻ります。
+OpenAI APIはバックエンドからのみ呼び出し、フロントエンドのHTMLやJavaScriptにはAPIキーを置きません。
 
 ## gravity_ball の使い方
 
@@ -182,6 +205,21 @@ Phase 3は、APIキーなしのルールベース実装です。
 Codex向けタスク案は生成するだけで、自動実装は行いません。
 自動実装はPhase 6以降の範囲です。
 
+## Phase 6a: Codex依頼準備
+
+Phase 6aでは、ラボ助手が生成したCodex向けタスク案を、画面右側の `Codex依頼案` パネルで確認できます。
+
+できること:
+
+- 最新のCodex向けタスク文を確認する
+- タスク文を `logs/codex_tasks/tasks.jsonl` に保存する
+- タスク文をクリップボードへコピーする
+- 同じセッションで保存した依頼案の履歴を見る
+
+Phase 6aでは、Codexによる自動実装、ソースコード変更、コマンド実行、Git操作は行いません。
+学生または教員が内容を確認し、必要な場合に手動でCodexへ渡します。
+既存シミュレーションの小改造の半自動化は Phase 6b の範囲です。
+
 ## APIの簡単な確認
 
 チャットAPI:
@@ -242,6 +280,22 @@ Invoke-RestMethod `
 Invoke-RestMethod http://127.0.0.1:8000/simulations/flocking/result
 ```
 
+Codex依頼案の保存:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/codex-tasks `
+  -ContentType "application/json; charset=utf-8" `
+  -Body '{"session_id":"demo","source_message":"感染シミュレーションを作りたい","experiment_spec":{"title":"感染シミュレーション案","simulation_name":"infection_sim","goal":"感染が広がる様子を観察する"},"codex_task":"infection_sim を小さく実装するタスク案"}'
+```
+
+Codex依頼案の取得:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8000/codex-tasks?session_id=demo&limit=5"
+```
+
 ## ログ
 
 チャット内容は、次の形式で追記保存されます。
@@ -256,6 +310,12 @@ logs/sessions/session_<session_id>.jsonl
 logs/experiments/gravity_ball.jsonl
 logs/experiments/maze_agent.jsonl
 logs/experiments/flocking.jsonl
+```
+
+Codex依頼案ログは、次の形式で追記保存されます。
+
+```text
+logs/codex_tasks/tasks.jsonl
 ```
 
 実行時に作られるJSONLログはGit管理対象外です。
@@ -294,6 +354,7 @@ simulations/
 logs/
   sessions/
   experiments/
+  codex_tasks/
 requirements.txt
 ```
 

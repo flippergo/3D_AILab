@@ -87,8 +87,20 @@
 
       .chat-panel {
         display: grid;
-        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        --simulation-panel-height: 250px;
+        --codex-task-panel-height: 180px;
+        display: grid;
+        grid-template-rows:
+          auto
+          minmax(96px, var(--simulation-panel-height))
+          8px
+          minmax(72px, var(--codex-task-panel-height))
+          8px
+          minmax(96px, 1fr)
+          auto;
         min-width: 0;
+        min-height: 0;
+        overflow: hidden;
         border-left: 1px solid var(--line);
         background: var(--panel);
       }
@@ -123,7 +135,9 @@
       .simulation-panel {
         display: grid;
         gap: 12px;
+        min-height: 0;
         padding: 14px 16px;
+        overflow: auto;
         border-bottom: 1px solid var(--line);
         background: #131820;
       }
@@ -234,6 +248,117 @@
         line-height: 1.5;
       }
 
+      .codex-task-panel {
+        display: grid;
+        gap: 10px;
+        min-height: 0;
+        padding: 14px 16px;
+        overflow: auto;
+        border-bottom: 1px solid var(--line);
+        background: #151b22;
+      }
+
+      .codex-task-panel h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .codex-task-panel p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .codex-task-meta {
+        display: grid;
+        gap: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .codex-task-text {
+        min-height: 96px;
+        max-height: 150px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        background: #0f141b;
+        color: var(--text);
+        font: 12px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace;
+        outline: none;
+      }
+
+      .codex-task-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .codex-task-actions button {
+        min-width: 0;
+        height: 34px;
+        border: 0;
+        border-radius: 8px;
+        padding: 0 10px;
+        background: var(--panel-strong);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .codex-task-actions button:first-child {
+        background: var(--accent);
+        color: #07110e;
+      }
+
+      .codex-task-actions button:disabled {
+        cursor: wait;
+        opacity: 0.58;
+      }
+
+      .codex-task-history {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .codex-task-history-item {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .panel-resizer {
+        position: relative;
+        height: 8px;
+        border-bottom: 1px solid var(--line);
+        background: #111720;
+        cursor: row-resize;
+        touch-action: none;
+      }
+
+      .panel-resizer::before {
+        position: absolute;
+        top: 3px;
+        left: 50%;
+        width: 44px;
+        height: 2px;
+        content: "";
+        transform: translateX(-50%);
+        border-radius: 999px;
+        background: #4a5664;
+      }
+
+      .panel-resizer:hover::before,
+      .panel-resizer.is-dragging::before {
+        background: var(--accent);
+      }
+
       .maze-controls {
         display: grid;
         gap: 10px;
@@ -326,18 +451,15 @@
       }
 
       @media (max-width: 760px) {
-        body {
-          overflow: auto;
-        }
-
         .app-shell {
           grid-template-columns: 1fr;
-          grid-template-rows: minmax(420px, 58vh) minmax(360px, 42vh);
-          min-height: 100vh;
-          height: auto;
+          grid-template-rows: minmax(300px, 38vh) minmax(0, 1fr);
+          height: 100vh;
         }
 
         .chat-panel {
+          --simulation-panel-height: 210px;
+          --codex-task-panel-height: 170px;
           border-top: 1px solid var(--line);
           border-left: 0;
         }
@@ -452,6 +574,39 @@
           </div>
           <div id="simulationStatus" class="simulation-status">まだシミュレーション結果は読み込まれていません。</div>
         </section>
+        <div
+          id="simulationPanelResizer"
+          class="panel-resizer"
+          role="separator"
+          aria-label="シミュレーション操作欄の高さ調整"
+          aria-orientation="horizontal"
+        ></div>
+
+        <section id="codexTaskPanel" class="codex-task-panel" aria-label="Codex request draft">
+          <h2>Codex依頼案</h2>
+          <p id="codexTaskEmpty">チャットで実験案を作ると、Codex向けの依頼文をここで確認・保存・コピーできます。</p>
+          <div id="codexTaskDetail" hidden>
+            <div class="codex-task-meta">
+              <div>対象: <span id="codexTaskSimulation">-</span></div>
+              <div>目的: <span id="codexTaskGoal">-</span></div>
+              <div id="codexTaskSaveInfo">未保存</div>
+              <div id="codexTaskActionInfo"></div>
+            </div>
+            <textarea id="codexTaskText" class="codex-task-text" readonly></textarea>
+            <div class="codex-task-actions">
+              <button id="saveCodexTaskButton" type="button">保存</button>
+              <button id="copyCodexTaskButton" type="button">コピー</button>
+            </div>
+          </div>
+          <div id="codexTaskHistory" class="codex-task-history" aria-live="polite"></div>
+        </section>
+        <div
+          id="codexTaskPanelResizer"
+          class="panel-resizer"
+          role="separator"
+          aria-label="Codex依頼案欄の高さ調整"
+          aria-orientation="horizontal"
+        ></div>
 
         <div id="chatLog" class="chat-log" aria-live="polite"></div>
 

@@ -102,6 +102,39 @@ export async function getFlockingResult() {
   return response.json();
 }
 
+export async function saveCodexTask(task) {
+  const response = await fetch("/codex-tasks", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(task),
+  });
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "Codex依頼案の保存に失敗しました。");
+  }
+
+  return response.json();
+}
+
+export async function getCodexTasks({ sessionId, limit = 20 } = {}) {
+  const params = new URLSearchParams();
+  if (sessionId) {
+    params.set("session_id", sessionId);
+  }
+  params.set("limit", String(limit));
+  const response = await fetch(`/codex-tasks?${params.toString()}`);
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "Codex依頼案の読み込みに失敗しました。");
+  }
+
+  return response.json();
+}
+
 async function readErrorDetail(response) {
   try {
     const payload = await response.json();

@@ -7,13 +7,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .llm_client import generate_lab_assistant_response
-from .schemas import ChatRequest, ChatResponse, FlockingRunRequest, GravityBallRunRequest, MazeAgentRunRequest, SimulationResult
+from .schemas import (
+    ChatRequest,
+    ChatResponse,
+    CodexTaskCreateRequest,
+    CodexTaskCreateResponse,
+    CodexTaskListResponse,
+    CodexTaskRecord,
+    FlockingRunRequest,
+    GravityBallRunRequest,
+    MazeAgentRunRequest,
+    SimulationResult,
+)
 from simulations.flocking.sim import FlockingConfig
 from simulations.flocking.sim import load_result as load_flocking_result
 from simulations.flocking.sim import run_and_save as run_flocking_and_save
@@ -28,6 +39,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 LOG_DIR = BASE_DIR / "logs" / "sessions"
 EXPERIMENT_LOG_DIR = BASE_DIR / "logs" / "experiments"
+CODEX_TASK_LOG_DIR = BASE_DIR / "logs" / "codex_tasks"
+CODEX_TASK_LOG_PATH = CODEX_TASK_LOG_DIR / "tasks.jsonl"
 SESSION_ID_PATTERN = re.compile(r"[^a-zA-Z0-9_-]")
 
 app = FastAPI(title="3D-AI Lab", version="0.1.0")
@@ -85,6 +98,46 @@ async def chat(request: ChatRequest) -> ChatResponse:
         codex_task=assistant_response.codex_task,
         assistant_notes=assistant_response.assistant_notes,
     )
+
+
+@app.post("/codex-tasks", response_model=CodexTaskCreateResponse)
+async def create_codex_task(request: CodexTaskCreateRequest) -> CodexTaskCreateResponse:
+    session_id = _safe_session_id(request.session_id)
+    created_at = datetime.now(timezone.utc).isoformat()
+    experiment_spec = request.experiment_spec or {}
+    simulation_name = str(experiment_spec.get("simulation_name") or "new_simulation")
+    title = str(experiment_spec.get("title") or "Codex依頼案")
+    record = CodexTaskRecord(
+        task_id=uuid4().hex,
+        created_at=created_at,
+        session_id=session_id,
+        source_message=request.source_message.strip(),
+        simulation_name=simulation_name,
+        title=title,
+        codex_task=request.codex_task.strip(),
+        experiment_spec=experiment_spec,
+        status="draft",
+    )
+    _append_codex_task_log(record)
+    return CodexTaskCreateResponse(
+        task_id=record.task_id,
+        created_at=record.created_at,
+        status=record.status,
+        simulation_name=record.simulation_name,
+        title=record.title,
+    )
+
+
+@app.get("/codex-tasks", response_model=CodexTaskListResponse)
+async def list_codex_tasks(
+    session_id: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+) -> CodexTaskListResponse:
+    safe_session_id = _safe_session_id(session_id) if session_id else None
+    tasks = _read_codex_task_logs()
+    if safe_session_id:
+        tasks = [task for task in tasks if task.session_id == safe_session_id]
+    return CodexTaskListResponse(tasks=tasks[:limit])
 
 
 @app.get("/simulations/gravity_ball/result", response_model=SimulationResult)
@@ -218,3 +271,27 @@ def _append_experiment_log(
 
     with log_path.open("a", encoding="utf-8") as fp:
         fp.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _append_codex_task_log(record: CodexTaskRecord) -> None:
+    CODEX_TASK_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    payload = record.model_dump() if hasattr(record, "model_dump") else record.dict()
+    with CODEX_TASK_LOG_PATH.open("a", encoding="utf-8") as fp:
+        fp.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+def _read_codex_task_logs() -> list[CodexTaskRecord]:
+    if not CODEX_TASK_LOG_PATH.exists():
+        return []
+
+    tasks: list[CodexTaskRecord] = []
+    with CODEX_TASK_LOG_PATH.open("r", encoding="utf-8") as fp:
+        for line in fp:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                tasks.append(CodexTaskRecord(**json.loads(line)))
+            except (json.JSONDecodeError, TypeError, ValueError):
+                continue
+    return sorted(tasks, key=lambda task: task.created_at, reverse=True)

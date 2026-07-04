@@ -19,6 +19,37 @@ class ChatResponse(BaseModel):
     assistant_notes: list[str] | None = None
 
 
+class CodexTaskCreateRequest(BaseModel):
+    session_id: str | None = Field(default=None, max_length=80)
+    source_message: str = Field(..., min_length=1, max_length=2000)
+    experiment_spec: dict[str, Any] = Field(default_factory=dict)
+    codex_task: str = Field(..., min_length=1, max_length=10000)
+
+
+class CodexTaskRecord(BaseModel):
+    task_id: str
+    created_at: str
+    session_id: str
+    source_message: str
+    simulation_name: str
+    title: str
+    codex_task: str
+    experiment_spec: dict[str, Any]
+    status: str = "draft"
+
+
+class CodexTaskCreateResponse(BaseModel):
+    task_id: str
+    created_at: str
+    status: str
+    simulation_name: str
+    title: str
+
+
+class CodexTaskListResponse(BaseModel):
+    tasks: list[CodexTaskRecord]
+
+
 class GravityBallRunRequest(BaseModel):
     gravity: float = Field(default=9.8, gt=0, le=50)
     initial_height: float = Field(default=5.0, ge=0.6, le=12)

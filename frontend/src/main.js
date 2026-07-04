@@ -2,11 +2,13 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
   getFlockingResult,
+  getCodexTasks,
   getGravityBallResult,
   getMazeAgentResult,
   runFlocking,
   runGravityBall,
   runMazeAgent,
+  saveCodexTask,
   sendChatMessage,
 } from "./api_client.js";
 import { animateLabAssistant, createLabAssistant } from "./avatar.js";
@@ -59,6 +61,7 @@ const viewers = {
   flocking: flockingViewer,
 };
 let activeSimulation = "gravity_ball";
+let currentCodexTaskDraft = null;
 mazeAgentViewer.setVisible(false);
 flockingViewer.setVisible(false);
 
@@ -74,6 +77,16 @@ const ui = setupLabUi({
       }
       if (response.codex_task) {
         ui.addAssistantMessage(`Codex向けタスク案:\n${response.codex_task}`);
+        currentCodexTaskDraft = {
+          session_id: sessionId,
+          source_message: message,
+          experiment_spec: response.experiment_spec ?? {},
+          codex_task: response.codex_task,
+        };
+        ui.showCodexTaskDraft({
+          experimentSpec: currentCodexTaskDraft.experiment_spec,
+          codexTask: currentCodexTaskDraft.codex_task,
+        });
       }
       ui.setSpeech(response.reply);
 
@@ -131,11 +144,14 @@ ui.onSpeedChange((speed) => {
   Object.values(viewers).forEach((viewer) => viewer.setSpeed(speed));
   updateSimulationStatus();
 });
+ui.onSaveCodexTask(saveCurrentCodexTaskDraft);
+ui.onCopyCodexTask(copyCurrentCodexTaskDraft);
 
 resize();
 window.addEventListener("resize", resize);
 requestAnimationFrame(tick);
 loadLatestActiveSimulation();
+loadCodexTaskHistory();
 
 function tick() {
   const delta = clock.getDelta();
@@ -318,6 +334,62 @@ function getActiveSimulationResult() {
     return getFlockingResult();
   }
   return getGravityBallResult();
+}
+
+async function saveCurrentCodexTaskDraft() {
+  if (!currentCodexTaskDraft) {
+    ui.setCodexTaskStatus("保存できるCodex依頼案がまだありません。");
+    return;
+  }
+
+  let saved = false;
+  ui.setCodexTaskBusy(true);
+  try {
+    const result = await saveCodexTask(currentCodexTaskDraft);
+    saved = true;
+    ui.setCodexTaskSaved({
+      taskId: result.task_id,
+      createdAt: result.created_at,
+    });
+    await loadCodexTaskHistory();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Codex依頼案の保存に失敗しました。";
+    ui.setCodexTaskStatus(message);
+    ui.addError(message);
+  } finally {
+    if (!saved) {
+      ui.setCodexTaskBusy(false);
+    }
+  }
+}
+
+async function copyCurrentCodexTaskDraft() {
+  if (!currentCodexTaskDraft) {
+    ui.setCodexTaskStatus("コピーできるCodex依頼案がまだありません。");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(currentCodexTaskDraft.codex_task);
+    ui.setCodexTaskStatus("コピーしました。");
+  } catch {
+    ui.selectCodexTaskText();
+    ui.setCodexTaskStatus("自動コピーに失敗しました。テキストを選択したので手動でコピーしてください。");
+  }
+}
+
+async function loadCodexTaskHistory() {
+  if (!sessionId) {
+    ui.setCodexTaskHistory([]);
+    return;
+  }
+
+  try {
+    const result = await getCodexTasks({ sessionId, limit: 5 });
+    ui.setCodexTaskHistory(result.tasks ?? []);
+  } catch (error) {
+    console.warn("Failed to load Codex task history", error);
+  }
 }
 
 function formatNumber(value) {

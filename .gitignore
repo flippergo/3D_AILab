@@ -7,5 +7,6 @@ __pycache__/
 
 logs/sessions/*.jsonl
 logs/experiments/*.jsonl
+logs/codex_tasks/*.jsonl
 output/playwright/
 .uvicorn*.log

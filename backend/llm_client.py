@@ -1,35 +1,112 @@
 from __future__ import annotations
 
+import json
+import os
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 
 from .codex_task_builder import build_codex_task
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional fallback before dependencies are installed
+    load_dotenv = None
+
+try:
+    from openai import OpenAI
+except ImportError:  # pragma: no cover - optional fallback before dependencies are installed
+    OpenAI = None
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+SESSION_LOG_DIR = BASE_DIR / "logs" / "sessions"
+SESSION_ID_PATTERN = re.compile(r"[^a-zA-Z0-9_-]")
+DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
+
+if load_dotenv is not None:
+    load_dotenv(BASE_DIR / ".env")
 
 
 @dataclass(frozen=True)
 class LabAssistantResponse:
     reply: str
     experiment_spec: dict[str, Any]
-    codex_task: str
+    codex_task: str | None
     assistant_notes: list[str]
     suggested_action: str | None = None
     simulation_params: dict[str, float | int | bool] | None = None
 
 
 def generate_lab_assistant_response(message: str, session_id: str) -> LabAssistantResponse:
+    rule_response = _generate_rule_based_response(message=message, session_id=session_id)
+    if not _openai_enabled():
+        return rule_response
+
+    openai_reply = _generate_openai_reply(
+        message=message,
+        session_id=session_id,
+        rule_response=rule_response,
+    )
+    if not openai_reply:
+        return replace(
+            rule_response,
+            assistant_notes=[
+                *rule_response.assistant_notes,
+                "OpenAI APIを呼び出せなかったため、ルールベース応答にフォールバックしました。",
+            ],
+        )
+
+    return replace(
+        rule_response,
+        reply=openai_reply,
+        assistant_notes=[
+            "OpenAI APIで自然文の返答を生成しました。",
+            *rule_response.assistant_notes,
+        ],
+    )
+
+
+def _generate_rule_based_response(message: str, session_id: str) -> LabAssistantResponse:
     cleaned = message.strip()
     if not cleaned:
         spec = _default_experiment_spec()
         return LabAssistantResponse(
             reply="まずは試したいことを一文で入力してみましょう。",
             experiment_spec=spec,
-            codex_task=build_codex_task(spec),
+            codex_task=None,
             assistant_notes=["入力が空だったため、最小の実験案を返しました。"],
         )
 
     normalized = unicodedata.normalize("NFKC", cleaned).lower()
+    if _looks_like_general_lab_question(normalized):
+        spec = _default_experiment_spec()
+        return LabAssistantResponse(
+            reply=(
+                "今は gravity_ball, maze_agent, flocking を試せます。"
+                "重力や高さを変える、迷路をランダム生成する、群れの個体数やまとまりを変える、といった指示をチャットから送れます。"
+            ),
+            experiment_spec=spec,
+            codex_task=None,
+            assistant_notes=["一般的な使い方案内として返しました。"],
+        )
+
+    if _looks_like_existing_simulation_change(normalized):
+        spec = _existing_simulation_change_spec(cleaned, normalized)
+        return LabAssistantResponse(
+            reply=(
+                "既存シミュレーションの変更案として整理しました。"
+                "Phase 6aでは自動実装せず、Codex依頼案を確認・保存・コピーできる形で用意します。"
+            ),
+            experiment_spec=spec,
+            codex_task=build_codex_task(spec),
+            assistant_notes=[
+                "Phase 6aではCodex依頼案を作るだけで、ソースコードの変更は行いません。",
+                "実装する場合は、人間が内容を確認してからCodexに渡します。",
+            ],
+        )
+
     if _looks_like_gravity_ball(normalized):
         params = _extract_gravity_ball_params(normalized)
         spec = _gravity_ball_spec(cleaned, params)
@@ -39,7 +116,7 @@ def generate_lab_assistant_response(message: str, session_id: str) -> LabAssista
             experiment_spec=spec,
             codex_task=build_codex_task(spec),
             assistant_notes=[
-                "Phase 3のAPIキーなし版として、ルールベースで実験仕様に分解しました。",
+                "ルールベースで実行条件を抽出しました。",
                 "gravity_ball はPhase 4〜5で実装済みのため、実行可能なアクションも返します。",
             ],
             suggested_action="run_gravity_ball",
@@ -92,7 +169,7 @@ def generate_lab_assistant_response(message: str, session_id: str) -> LabAssista
     spec = _generic_experiment_spec(cleaned)
     return LabAssistantResponse(
         reply=(
-            "実験案として整理しました。"
+            "実験案として整理しました。Phase 6aではまだ実行せず、Codex依頼案として確認できるようにします。"
             "まずは登場物、動き、変更できる値、観察したい結果を1つずつ決めると、3Dシミュレーションにしやすくなります。"
         ),
         experiment_spec=spec,
@@ -109,11 +186,172 @@ def generate_reply(message: str, session_id: str) -> str:
     return generate_lab_assistant_response(message, session_id).reply
 
 
+def _openai_enabled() -> bool:
+    enabled = os.getenv("OPENAI_ENABLED", "false").strip().lower()
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    return enabled in {"1", "true", "yes", "on"} and bool(api_key) and OpenAI is not None
+
+
+def _generate_openai_reply(
+    *,
+    message: str,
+    session_id: str,
+    rule_response: LabAssistantResponse,
+) -> str | None:
+    model = os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL).strip() or DEFAULT_OPENAI_MODEL
+    timeout = _read_timeout_seconds()
+    try:
+        client = OpenAI(timeout=timeout)
+        response = client.responses.create(
+            model=model,
+            input=[
+                {
+                    "role": "system",
+                    "content": _openai_system_prompt(),
+                },
+                {
+                    "role": "user",
+                    "content": _build_openai_user_context(
+                        message=message,
+                        session_id=session_id,
+                        rule_response=rule_response,
+                    ),
+                },
+            ],
+        )
+        return _extract_response_text(response)
+    except Exception:
+        return None
+
+
+def _read_timeout_seconds() -> float:
+    value = os.getenv("OPENAI_TIMEOUT_SECONDS", "20").strip()
+    try:
+        return max(3.0, min(float(value), 60.0))
+    except ValueError:
+        return 20.0
+
+
+def _openai_system_prompt() -> str:
+    return """あなたは3D-AI Labのラボ助手です。
+学生に一方的に講義する先生ではなく、学生の「試したいこと」を小さな3D実験に分解して一緒に考える助手として振る舞ってください。
+
+重要な制約:
+- 返答は日本語で、初心者向けに短く具体的にしてください。
+- 実行可能な既存シミュレーションは gravity_ball, maze_agent, flocking です。
+- Phase 6aではCodex依頼案を作成・保存・コピーできるだけで、自動実装やソースコード変更は行いません。
+- APIキー、内部実装、環境変数の値は説明しないでください。
+- 返答は自然文だけにしてください。JSONやMarkdown表は不要です。
+- 既存の構造化判定結果に反するアクションを約束しないでください。
+"""
+
+
+def _build_openai_user_context(
+    *,
+    message: str,
+    session_id: str,
+    rule_response: LabAssistantResponse,
+) -> str:
+    context = {
+        "student_message": message,
+        "recent_conversation": _load_recent_session_context(session_id),
+        "structured_interpretation": {
+            "suggested_action": rule_response.suggested_action,
+            "simulation_params": rule_response.simulation_params,
+            "experiment_spec": rule_response.experiment_spec,
+            "assistant_notes": rule_response.assistant_notes,
+        },
+        "reply_goal": (
+            "上の構造化判定を踏まえて、学生に次の一歩が分かる短い返答をしてください。"
+            "実行可能な場合は何が実行されるかを伝え、未実装や改造案の場合はCodex依頼案として確認できることを伝えてください。"
+        ),
+    }
+    return json.dumps(context, ensure_ascii=False)
+
+
+def _extract_response_text(response: Any) -> str | None:
+    output_text = getattr(response, "output_text", None)
+    if isinstance(output_text, str) and output_text.strip():
+        return output_text.strip()
+
+    output = getattr(response, "output", None)
+    if not output:
+        return None
+    parts: list[str] = []
+    for item in output:
+        for content in getattr(item, "content", []) or []:
+            text = getattr(content, "text", None)
+            if isinstance(text, str):
+                parts.append(text)
+    text = "\n".join(parts).strip()
+    return text or None
+
+
+def _load_recent_session_context(session_id: str, limit: int = 6) -> list[dict[str, str]]:
+    safe_session_id = SESSION_ID_PATTERN.sub("_", session_id.strip())[:80] if session_id else ""
+    if not safe_session_id:
+        return []
+
+    log_path = SESSION_LOG_DIR / f"session_{safe_session_id}.jsonl"
+    if not log_path.exists():
+        return []
+
+    records: list[dict[str, str]] = []
+    try:
+        lines = log_path.read_text(encoding="utf-8").splitlines()[-limit:]
+    except OSError:
+        return []
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        message = str(record.get("message") or "").strip()
+        reply = str(record.get("reply") or "").strip()
+        if message:
+            records.append({"role": "student", "content": message})
+        if reply:
+            records.append({"role": "assistant", "content": reply})
+    return records[-limit:]
+
+
+def _looks_like_general_lab_question(message: str) -> bool:
+    return any(
+        keyword in message
+        for keyword in [
+            "何を試",
+            "なにを試",
+            "何ができ",
+            "なにができ",
+            "できること",
+            "使い方",
+            "ヘルプ",
+            "help",
+            "こんにちは",
+        ]
+    )
+
+
 def _looks_like_gravity_ball(message: str) -> bool:
     return any(
         keyword in message
         for keyword in ["重力", "gravity", "落下", "ボール", "ball", "跳ね", "高さ", "height", "反発", "bounce"]
     )
+
+
+def _looks_like_existing_simulation_change(message: str) -> bool:
+    simulation_keywords = ["gravity_ball", "maze_agent", "flocking", "ボール", "迷路", "群れ", "鳥", "魚"]
+    change_keywords = ["改造", "変更", "追加", "実装", "作って", "作りたい", "色", "表示", "ログ", "readme", "機能"]
+    parameter_only_keywords = ["重力", "高さ", "反発", "個体", "まとまり", "向き合わせ", "距離確保", "ランダム"]
+    if not any(keyword in message for keyword in simulation_keywords):
+        return False
+    if not any(keyword in message for keyword in change_keywords):
+        return False
+    if any(keyword in message for keyword in parameter_only_keywords) and not any(
+        keyword in message for keyword in ["色", "表示", "ログ", "readme", "機能", "追加", "実装", "改造"]
+    ):
+        return False
+    return True
 
 
 def _extract_gravity_ball_params(message: str) -> dict[str, float | int | bool]:
@@ -231,6 +469,34 @@ def _flocking_spec(message: str, params: dict[str, float | int | bool]) -> dict[
         },
         "observations": ["群れのまとまり", "個体間距離", "進行方向の揃い方", "パラメータ変更による軌道の違い"],
         "phase": "Phase 7b 実行可能",
+    }
+
+
+def _existing_simulation_change_spec(message: str, normalized: str) -> dict[str, Any]:
+    simulation_name = "new_simulation"
+    objects = ["既存シミュレーションの登場物", "変更対象"]
+    if any(keyword in normalized for keyword in ["gravity_ball", "ボール"]):
+        simulation_name = "gravity_ball"
+        objects = ["ボール", "床", "軌跡", "変更対象"]
+    elif any(keyword in normalized for keyword in ["maze_agent", "迷路"]):
+        simulation_name = "maze_agent"
+        objects = ["迷路", "壁", "エージェント", "ゴール", "変更対象"]
+    elif any(keyword in normalized for keyword in ["flocking", "群れ", "鳥", "魚"]):
+        simulation_name = "flocking"
+        objects = ["群れエージェント", "移動範囲", "変更対象"]
+
+    return {
+        "title": f"{simulation_name} の小改造案",
+        "simulation_name": simulation_name,
+        "goal": f"学生の入力「{message}」に基づき、既存シミュレーションへ小さな変更を加える",
+        "source_message": message,
+        "objects": objects,
+        "parameters": {
+            "requested_change": message,
+            "scope": "既存シミュレーションの小改造",
+        },
+        "observations": ["変更前後で見た目または挙動がどう変わったか", "既存の実行・再生が壊れていないか"],
+        "phase": "Phase 6a Codex依頼案",
     }
 
 

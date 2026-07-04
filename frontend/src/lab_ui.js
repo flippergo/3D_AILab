@@ -1,4 +1,5 @@
 export function setupLabUi({ onSubmit }) {
+  const chatPanel = document.querySelector(".chat-panel");
   const form = document.querySelector("#chatForm");
   const input = document.querySelector("#messageInput");
   const sendButton = document.querySelector("#sendButton");
@@ -23,11 +24,27 @@ export function setupLabUi({ onSubmit }) {
   const separationInput = document.querySelector("#separationInput");
   const speedSelect = document.querySelector("#speedSelect");
   const runSimulationButton = document.querySelector("#runSimulationButton");
+  const simulationPanel = document.querySelector(".simulation-panel");
+  const simulationPanelResizer = document.querySelector("#simulationPanelResizer");
   const playPauseButton = document.querySelector("#playPauseButton");
   const resetSimulationButton = document.querySelector("#resetSimulationButton");
   const stepSimulationButton = document.querySelector("#stepSimulationButton");
   const loadResultButton = document.querySelector("#loadResultButton");
   const simulationStatus = document.querySelector("#simulationStatus");
+  const codexTaskEmpty = document.querySelector("#codexTaskEmpty");
+  const codexTaskPanel = document.querySelector("#codexTaskPanel");
+  const codexTaskPanelResizer = document.querySelector("#codexTaskPanelResizer");
+  const codexTaskDetail = document.querySelector("#codexTaskDetail");
+  const codexTaskSimulation = document.querySelector("#codexTaskSimulation");
+  const codexTaskGoal = document.querySelector("#codexTaskGoal");
+  const codexTaskSaveInfo = document.querySelector("#codexTaskSaveInfo");
+  const codexTaskActionInfo = document.querySelector("#codexTaskActionInfo");
+  const codexTaskText = document.querySelector("#codexTaskText");
+  const saveCodexTaskButton = document.querySelector("#saveCodexTaskButton");
+  const copyCodexTaskButton = document.querySelector("#copyCodexTaskButton");
+  const codexTaskHistory = document.querySelector("#codexTaskHistory");
+
+  initResizablePanels();
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -163,6 +180,54 @@ export function setupLabUi({ onSubmit }) {
     setSimulationStatus(status) {
       simulationStatus.textContent = status;
     },
+    showCodexTaskDraft({ experimentSpec, codexTask }) {
+      const simulationName = experimentSpec?.simulation_name ?? "new_simulation";
+      const goal = experimentSpec?.goal ?? "未設定";
+      codexTaskEmpty.hidden = true;
+      codexTaskDetail.hidden = false;
+      codexTaskSimulation.textContent = simulationName;
+      codexTaskGoal.textContent = goal;
+      codexTaskSaveInfo.textContent = "未保存";
+      codexTaskActionInfo.textContent = "";
+      codexTaskText.value = codexTask;
+      saveCodexTaskButton.disabled = false;
+      saveCodexTaskButton.textContent = "保存";
+      copyCodexTaskButton.disabled = false;
+    },
+    setCodexTaskSaved({ taskId, createdAt }) {
+      codexTaskSaveInfo.textContent = `保存済み: ${taskId} / ${formatDateTime(createdAt)}`;
+      saveCodexTaskButton.disabled = true;
+      saveCodexTaskButton.textContent = "保存";
+      copyCodexTaskButton.disabled = false;
+    },
+    setCodexTaskBusy(isBusy) {
+      saveCodexTaskButton.disabled = isBusy;
+      copyCodexTaskButton.disabled = isBusy;
+      saveCodexTaskButton.textContent = isBusy ? "保存中" : "保存";
+    },
+    setCodexTaskStatus(message) {
+      codexTaskActionInfo.textContent = message;
+    },
+    selectCodexTaskText() {
+      codexTaskText.focus();
+      codexTaskText.select();
+    },
+    setCodexTaskHistory(tasks = []) {
+      codexTaskHistory.replaceChildren();
+      if (!tasks.length) {
+        return;
+      }
+      const title = document.createElement("div");
+      title.textContent = "保存済み依頼案";
+      codexTaskHistory.append(title);
+      tasks.slice(0, 5).forEach((task) => {
+        const item = document.createElement("div");
+        item.className = "codex-task-history-item";
+        item.title = task.title;
+        item.textContent = `${formatDateTime(task.created_at)} / ${task.simulation_name} / ${task.title}`;
+        codexTaskHistory.append(item);
+      });
+    },
     onRunSimulation(handler) {
       runSimulationButton.addEventListener("click", handler);
     },
@@ -187,6 +252,12 @@ export function setupLabUi({ onSubmit }) {
     onSpeedChange(handler) {
       speedSelect.addEventListener("change", () => handler(Number(speedSelect.value)));
     },
+    onSaveCodexTask(handler) {
+      saveCodexTaskButton.addEventListener("click", handler);
+    },
+    onCopyCodexTask(handler) {
+      copyCodexTaskButton.addEventListener("click", handler);
+    },
   };
 
   function setSimulationMode(simulationName) {
@@ -196,6 +267,83 @@ export function setupLabUi({ onSubmit }) {
     gravityParams.hidden = isMaze || isFlocking;
     mazeParams.hidden = !isMaze;
     flockingParams.hidden = !isFlocking;
+  }
+
+  function initResizablePanels() {
+    if (!chatPanel || !simulationPanel || !codexTaskPanel || !simulationPanelResizer || !codexTaskPanelResizer) {
+      return;
+    }
+
+    const minChatHeight = 96;
+    const minSimulationHeight = 120;
+    const minCodexHeight = 72;
+    const storageKeys = {
+      simulation: "3d-ai-lab-simulation-panel-height",
+      codex: "3d-ai-lab-codex-task-panel-height",
+    };
+
+    const readStoredHeight = (key, fallback) => {
+      const value = Number(window.localStorage.getItem(key));
+      return Number.isFinite(value) ? value : fallback;
+    };
+
+    const setPanelHeights = (simulationHeight, codexHeight) => {
+      const availableHeight =
+        chatPanel.clientHeight -
+        document.querySelector(".chat-header").offsetHeight -
+        form.offsetHeight -
+        simulationPanelResizer.offsetHeight -
+        codexTaskPanelResizer.offsetHeight -
+        minChatHeight;
+      const available = Math.max(minSimulationHeight + minCodexHeight, availableHeight);
+      const simulation = clampNumber(simulationHeight, minSimulationHeight, available - minCodexHeight);
+      const codex = clampNumber(codexHeight, minCodexHeight, available - simulation);
+
+      chatPanel.style.setProperty("--simulation-panel-height", `${simulation}px`);
+      chatPanel.style.setProperty("--codex-task-panel-height", `${codex}px`);
+      return { simulation, codex };
+    };
+
+    const initial = setPanelHeights(
+      readStoredHeight(storageKeys.simulation, simulationPanel.getBoundingClientRect().height || 250),
+      readStoredHeight(storageKeys.codex, codexTaskPanel.getBoundingClientRect().height || 180)
+    );
+    window.localStorage.setItem(storageKeys.simulation, String(Math.round(initial.simulation)));
+    window.localStorage.setItem(storageKeys.codex, String(Math.round(initial.codex)));
+
+    const startDrag = (event, target) => {
+      event.preventDefault();
+      const handle = target === "simulation" ? simulationPanelResizer : codexTaskPanelResizer;
+      const startY = event.clientY;
+      const startSimulationHeight = simulationPanel.getBoundingClientRect().height;
+      const startCodexHeight = codexTaskPanel.getBoundingClientRect().height;
+      handle.classList.add("is-dragging");
+      handle.setPointerCapture?.(event.pointerId);
+
+      const onPointerMove = (moveEvent) => {
+        const delta = moveEvent.clientY - startY;
+        const nextSimulationHeight = target === "simulation" ? startSimulationHeight + delta : startSimulationHeight;
+        const nextCodexHeight = target === "codex" ? startCodexHeight + delta : startCodexHeight;
+        const next = setPanelHeights(nextSimulationHeight, nextCodexHeight);
+        window.localStorage.setItem(storageKeys.simulation, String(Math.round(next.simulation)));
+        window.localStorage.setItem(storageKeys.codex, String(Math.round(next.codex)));
+      };
+
+      const onPointerUp = () => {
+        handle.classList.remove("is-dragging");
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    };
+
+    simulationPanelResizer.addEventListener("pointerdown", (event) => startDrag(event, "simulation"));
+    codexTaskPanelResizer.addEventListener("pointerdown", (event) => startDrag(event, "codex"));
+    window.addEventListener("resize", () => {
+      setPanelHeights(simulationPanel.getBoundingClientRect().height, codexTaskPanel.getBoundingClientRect().height);
+    });
   }
 }
 
@@ -228,4 +376,17 @@ function readOptionalInteger(input) {
 
 function clampNumber(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value ?? "-";
+  }
+  return date.toLocaleString("ja-JP", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
