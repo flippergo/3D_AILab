@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+logs/sessions/*.jsonl
+logs/experiments/*.jsonl
+output/playwright/
+.uvicorn*.log
