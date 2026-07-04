@@ -148,30 +148,6 @@
         line-height: 1.45;
       }
 
-      .current-datetime {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
-        gap: 4px 8px;
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(69, 196, 160, 0.28);
-      }
-
-      .current-datetime span {
-        color: var(--muted);
-        font-size: 12px;
-      }
-
-      .current-datetime time {
-        min-width: 0;
-        color: var(--text);
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.35;
-        overflow-wrap: anywhere;
-      }
-
       .simulation-panel {
         display: grid;
         gap: 12px;
@@ -579,10 +555,6 @@
         <header class="chat-header">
           <h1>3D-AI Lab</h1>
           <p>入力した内容はFastAPIに送信され、仮応答がログに保存されます。</p>
-          <div class="current-datetime">
-            <span>現在日時</span>
-            <time id="currentDateTime" datetime="" aria-live="polite">読み込み中</time>
-          </div>
         </header>
 
         <section class="simulation-panel" aria-label="simulation controls">
@@ -734,7 +706,6 @@
         }
       }
     </script>
-    <script type="module" src="/src/current_datetime.js?v=20260704-progress-sync2"></script>
     <script type="module" src="/src/main.js?v=20260704-progress-sync2"></script>
   </body>
 </html>

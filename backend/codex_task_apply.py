@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import unicodedata
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -17,7 +19,13 @@ from simulations.maze_agent.sim import MazeAgentConfig
 from simulations.maze_agent.sim import run_and_save as run_maze_agent_and_save
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-EVENT_LOG_PATH = BASE_DIR / "logs" / "codex_tasks" / "events.jsonl"
+CODEX_TASK_DIR = BASE_DIR / "logs" / "codex_tasks"
+EVENT_LOG_PATH = CODEX_TASK_DIR / "events.jsonl"
+IMPLEMENTATION_REQUEST_LOG_PATH = CODEX_TASK_DIR / "implementation_requests.jsonl"
+PENDING_IMPLEMENTATION_DIR = CODEX_TASK_DIR / "pending_implementation"
+WATCHER_OUTPUT_DIR = CODEX_TASK_DIR / "watcher_outputs"
+WATCHER_STATE_PATH = CODEX_TASK_DIR / "watcher_state.json"
+WATCHER_LOCK_PATH = CODEX_TASK_DIR / "watcher.lock"
 
 SIMULATION_DIRS = {
     "gravity_ball": BASE_DIR / "simulations" / "gravity_ball",
@@ -37,7 +45,7 @@ DEFAULT_VISUALS = {
         "start_color": "#65d46e",
         "goal_color": "#ffd166",
         "agent_color": "#72a7ff",
-        "wall_color": "#000000",
+        "wall_color": "#566273",
     },
     "flocking": {
         "agent_palette": ["#8fd3ff", "#ffd166", "#45c4a0"],
@@ -198,11 +206,12 @@ def reset_lab_runtime_state() -> dict:
     reset_at = datetime.now(timezone.utc).isoformat()
     simulations: dict[str, dict] = {}
     changed_files: list[str] = []
+    deleted_files = _delete_implementation_request_artifacts()
 
     for simulation_name, simulation_dir in SIMULATION_DIRS.items():
         customization_path = simulation_dir / "customization.json"
         _write_customization(customization_path, {"visuals": DEFAULT_VISUALS[simulation_name]})
-        result = _run_simulation(simulation_name)
+        result = _run_reset_simulation(simulation_name)
         simulations[simulation_name] = {
             "summary": result.get("summary", {}),
             "parameters": result.get("meta", {}).get("parameters", {}),
@@ -223,14 +232,59 @@ def reset_lab_runtime_state() -> dict:
             "simulation_name": "all",
             "status": "reset",
             "changed_files": changed_files,
+            "deleted_files": deleted_files,
         }
     )
     return {
         "reset_at": reset_at,
         "simulations": simulations,
         "changed_files": changed_files,
+        "deleted_files": deleted_files,
         "message": "3D-AI Labを初期状態に戻しました。",
     }
+
+
+def _delete_implementation_request_artifacts() -> list[str]:
+    deleted_files: list[str] = []
+    targets = [
+        EVENT_LOG_PATH,
+        IMPLEMENTATION_REQUEST_LOG_PATH,
+        WATCHER_STATE_PATH,
+        PENDING_IMPLEMENTATION_DIR,
+        WATCHER_OUTPUT_DIR,
+    ]
+    if _watcher_lock_is_stale():
+        targets.append(WATCHER_LOCK_PATH)
+
+    for path in targets:
+        if not path.exists():
+            continue
+        deleted_files.append(str(path.relative_to(BASE_DIR)))
+        if path.is_dir():
+            shutil.rmtree(path)
+            path.mkdir(parents=True, exist_ok=True)
+        else:
+            path.unlink()
+
+    PENDING_IMPLEMENTATION_DIR.mkdir(parents=True, exist_ok=True)
+    WATCHER_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    return deleted_files
+
+
+def _watcher_lock_is_stale() -> bool:
+    if not WATCHER_LOCK_PATH.exists():
+        return False
+    try:
+        pid = int(WATCHER_LOCK_PATH.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return True
+    if pid <= 0:
+        return True
+    try:
+        os.kill(pid, 0)
+    except (OSError, ValueError):
+        return True
+    return False
 
 
 def _unsupported_plan(task: CodexTaskRecord, *, simulation_name: str, warning: str) -> CodexTaskPlanResponse:
@@ -417,6 +471,20 @@ def _run_simulation(simulation_name: str) -> dict:
     if simulation_name == "flocking":
         config_path = SIMULATION_DIRS[simulation_name] / "config.json"
         return run_flocking_and_save(FlockingConfig(**_read_config(config_path)))
+    raise ValueError(f"Unsupported simulation: {simulation_name}")
+
+
+def _run_reset_simulation(simulation_name: str) -> dict:
+    config_path = SIMULATION_DIRS[simulation_name] / "config.json"
+    config = _read_config(config_path)
+    if simulation_name == "gravity_ball":
+        return run_gravity_ball_and_save(GravityBallConfig(**config))
+    if simulation_name == "maze_agent":
+        return run_maze_agent_and_save(MazeAgentConfig(**config))
+    if simulation_name == "flocking":
+        if config.get("seed") is None:
+            config["seed"] = 123
+        return run_flocking_and_save(FlockingConfig(**config))
     raise ValueError(f"Unsupported simulation: {simulation_name}")
 
 

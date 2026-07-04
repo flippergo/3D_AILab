@@ -12,8 +12,6 @@ RESULT_PATH = Path(__file__).with_name("result.json")
 CUSTOMIZATION_PATH = Path(__file__).with_name("customization.json")
 DEFAULT_VISUALS = {
     "ball_color": "#ffd166",
-    "ball_color_mode": "solid",
-    "ball_palette": ["#ff4b4b", "#ff9f1c", "#ffe45e", "#3ddc84", "#4dabf7", "#7b61ff"],
     "floor_color": "#1a222b",
     "trajectory_color": "#ffd166",
 }
@@ -80,8 +78,6 @@ def run_simulation(config: GravityBallConfig) -> dict[str, Any]:
                 "type": "sphere",
                 "radius": BALL_RADIUS,
                 "color": visuals["ball_color"],
-                "color_mode": visuals["ball_color_mode"],
-                "palette": visuals["ball_palette"],
             },
             {
                 "id": "floor",

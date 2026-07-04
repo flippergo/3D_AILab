@@ -600,7 +600,7 @@ function stopCodexImplementationPolling() {
 
 async function resetLabToInitialState() {
   const shouldReset = window.confirm(
-    "3D-AI Labを初期状態に戻します。見た目の変更と最新シミュレーション結果を既定値に戻し、画面上の会話と依頼案表示をクリアします。よろしいですか？"
+    "3D-AI Labを初期状態に戻します。見た目の変更、最新シミュレーション結果、実装依頼ファイル、画面上の会話と依頼案表示をクリアします。よろしいですか？"
   );
   if (!shouldReset) {
     return;

@@ -17,7 +17,7 @@ DEFAULT_VISUALS = {
     "start_color": "#65d46e",
     "goal_color": "#ffd166",
     "agent_color": "#72a7ff",
-    "wall_color": "#000000",
+    "wall_color": "#566273",
 }
 START = (0, 0)
 GOAL = (6, 6)

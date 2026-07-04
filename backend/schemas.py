@@ -136,6 +136,7 @@ class LabResetResponse(BaseModel):
     reset_at: str
     simulations: dict[str, dict[str, Any]]
     changed_files: list[str]
+    deleted_files: list[str] = Field(default_factory=list)
     message: str
 
 
