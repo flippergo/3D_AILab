@@ -1,0 +1,3277 @@
+{
+  "meta": {
+    "simulation_name": "maze_agent",
+    "steps": 145,
+    "dt": 0.08,
+    "parameters": {
+      "grid_size": 7,
+      "steps_per_cell": 12,
+      "dt": 0.08,
+      "show_search": false
+    }
+  },
+  "objects": [
+    {
+      "id": "maze_floor",
+      "type": "maze_floor",
+      "grid_size": 7,
+      "tile_size": 1,
+      "color": "#1b242d"
+    },
+    {
+      "id": "maze_path",
+      "type": "path",
+      "cells": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "color": "#45c4a0"
+    },
+    {
+      "id": "start",
+      "type": "marker",
+      "cell": [
+        0,
+        0
+      ],
+      "color": "#65d46e"
+    },
+    {
+      "id": "goal",
+      "type": "marker",
+      "cell": [
+        6,
+        6
+      ],
+      "color": "#ffd166"
+    },
+    {
+      "id": "agent_1",
+      "type": "agent",
+      "radius": 0.22,
+      "color": "#72a7ff"
+    },
+    {
+      "id": "wall_0",
+      "type": "wall",
+      "cell": [
+        1,
+        0
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_1",
+      "type": "wall",
+      "cell": [
+        1,
+        1
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_2",
+      "type": "wall",
+      "cell": [
+        1,
+        3
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_3",
+      "type": "wall",
+      "cell": [
+        2,
+        3
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_4",
+      "type": "wall",
+      "cell": [
+        2,
+        5
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_5",
+      "type": "wall",
+      "cell": [
+        3,
+        3
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_6",
+      "type": "wall",
+      "cell": [
+        3,
+        5
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_7",
+      "type": "wall",
+      "cell": [
+        4,
+        1
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_8",
+      "type": "wall",
+      "cell": [
+        4,
+        2
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_9",
+      "type": "wall",
+      "cell": [
+        4,
+        3
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    },
+    {
+      "id": "wall_10",
+      "type": "wall",
+      "cell": [
+        5,
+        5
+      ],
+      "height": 0.76,
+      "color": "#566273"
+    }
+  ],
+  "frames": [
+    {
+      "t": 0,
+      "time": 0.0,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -3.0
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 1,
+      "time": 0.08,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.9167
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 2,
+      "time": 0.16,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.8333
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 3,
+      "time": 0.24,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.75
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 4,
+      "time": 0.32,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.6667
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 5,
+      "time": 0.4,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.5833
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 6,
+      "time": 0.48,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.5
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 7,
+      "time": 0.56,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.4167
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 8,
+      "time": 0.64,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.3333
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 9,
+      "time": 0.72,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.25
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 10,
+      "time": 0.8,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.1667
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 11,
+      "time": 0.88,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.0833
+          ],
+          "cell": [
+            0,
+            0
+          ],
+          "target_cell": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "t": 12,
+      "time": 0.96,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -2.0
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 13,
+      "time": 1.04,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.9167
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 14,
+      "time": 1.12,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.8333
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 15,
+      "time": 1.2,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.75
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 16,
+      "time": 1.28,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.6667
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 17,
+      "time": 1.36,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.5833
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 18,
+      "time": 1.44,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.5
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 19,
+      "time": 1.52,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.4167
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 20,
+      "time": 1.6,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.3333
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 21,
+      "time": 1.68,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.25
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 22,
+      "time": 1.76,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.1667
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 23,
+      "time": 1.84,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.0833
+          ],
+          "cell": [
+            0,
+            1
+          ],
+          "target_cell": [
+            0,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "t": 24,
+      "time": 1.92,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -1.0
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 25,
+      "time": 2.0,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.9167
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 26,
+      "time": 2.08,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.8333
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 27,
+      "time": 2.16,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.75
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 28,
+      "time": 2.24,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.6667
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 29,
+      "time": 2.32,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.5833
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 30,
+      "time": 2.4,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.5
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 31,
+      "time": 2.48,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.4167
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 32,
+      "time": 2.56,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.3333
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 33,
+      "time": 2.64,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.25
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 34,
+      "time": 2.72,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.1667
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 35,
+      "time": 2.8,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            -0.0833
+          ],
+          "cell": [
+            0,
+            2
+          ],
+          "target_cell": [
+            0,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "t": 36,
+      "time": 2.88,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.0
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 37,
+      "time": 2.96,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.0833
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 38,
+      "time": 3.04,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.1667
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 39,
+      "time": 3.12,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.25
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 40,
+      "time": 3.2,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.3333
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 41,
+      "time": 3.28,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.4167
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 42,
+      "time": 3.36,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.5
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 43,
+      "time": 3.44,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.5833
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 44,
+      "time": 3.52,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.6667
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 45,
+      "time": 3.6,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.75
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 46,
+      "time": 3.68,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.8333
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 47,
+      "time": 3.76,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            0.9167
+          ],
+          "cell": [
+            0,
+            3
+          ],
+          "target_cell": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 48,
+      "time": 3.84,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -3.0,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 49,
+      "time": 3.92,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.9167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 50,
+      "time": 4.0,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.8333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 51,
+      "time": 4.08,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.75,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 52,
+      "time": 4.16,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.6667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 53,
+      "time": 4.24,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.5833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 54,
+      "time": 4.32,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.5,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 55,
+      "time": 4.4,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.4167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 56,
+      "time": 4.48,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.3333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 57,
+      "time": 4.56,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.25,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 58,
+      "time": 4.64,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.1667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 59,
+      "time": 4.72,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.0833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            0,
+            4
+          ],
+          "target_cell": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 60,
+      "time": 4.8,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -2.0,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 61,
+      "time": 4.88,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.9167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 62,
+      "time": 4.96,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.8333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 63,
+      "time": 5.04,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.75,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 64,
+      "time": 5.12,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.6667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 65,
+      "time": 5.2,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.5833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 66,
+      "time": 5.28,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.5,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 67,
+      "time": 5.36,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.4167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 68,
+      "time": 5.44,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.3333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 69,
+      "time": 5.52,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.25,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 70,
+      "time": 5.6,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.1667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 71,
+      "time": 5.68,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.0833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            1,
+            4
+          ],
+          "target_cell": [
+            2,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 72,
+      "time": 5.76,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -1.0,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 73,
+      "time": 5.84,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.9167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 74,
+      "time": 5.92,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.8333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 75,
+      "time": 6.0,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.75,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 76,
+      "time": 6.08,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.6667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 77,
+      "time": 6.16,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.5833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 78,
+      "time": 6.24,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.5,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 79,
+      "time": 6.32,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.4167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 80,
+      "time": 6.4,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.3333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 81,
+      "time": 6.48,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.25,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 82,
+      "time": 6.56,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.1667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 83,
+      "time": 6.64,
+      "objects": {
+        "agent_1": {
+          "position": [
+            -0.0833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            2,
+            4
+          ],
+          "target_cell": [
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 84,
+      "time": 6.72,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.0,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 85,
+      "time": 6.8,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.0833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 86,
+      "time": 6.88,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.1667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 87,
+      "time": 6.96,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.25,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 88,
+      "time": 7.04,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.3333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 89,
+      "time": 7.12,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.4167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 90,
+      "time": 7.2,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.5,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 91,
+      "time": 7.28,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.5833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 92,
+      "time": 7.36,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.6667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 93,
+      "time": 7.44,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.75,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 94,
+      "time": 7.52,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.8333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 95,
+      "time": 7.6,
+      "objects": {
+        "agent_1": {
+          "position": [
+            0.9167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            3,
+            4
+          ],
+          "target_cell": [
+            4,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 96,
+      "time": 7.68,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.0,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 97,
+      "time": 7.76,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.0833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 98,
+      "time": 7.84,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.1667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 99,
+      "time": 7.92,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.25,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 100,
+      "time": 8.0,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.3333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 101,
+      "time": 8.08,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.4167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 102,
+      "time": 8.16,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.5,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 103,
+      "time": 8.24,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.5833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 104,
+      "time": 8.32,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.6667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 105,
+      "time": 8.4,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.75,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 106,
+      "time": 8.48,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.8333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 107,
+      "time": 8.56,
+      "objects": {
+        "agent_1": {
+          "position": [
+            1.9167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            4,
+            4
+          ],
+          "target_cell": [
+            5,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 108,
+      "time": 8.64,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.0,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 109,
+      "time": 8.72,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.0833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 110,
+      "time": 8.8,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.1667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 111,
+      "time": 8.88,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.25,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 112,
+      "time": 8.96,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.3333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 113,
+      "time": 9.04,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.4167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 114,
+      "time": 9.12,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.5,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 115,
+      "time": 9.2,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.5833,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 116,
+      "time": 9.28,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.6667,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 117,
+      "time": 9.36,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.75,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 118,
+      "time": 9.44,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.8333,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 119,
+      "time": 9.52,
+      "objects": {
+        "agent_1": {
+          "position": [
+            2.9167,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            5,
+            4
+          ],
+          "target_cell": [
+            6,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "t": 120,
+      "time": 9.6,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.0
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 121,
+      "time": 9.68,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.0833
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 122,
+      "time": 9.76,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.1667
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 123,
+      "time": 9.84,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.25
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 124,
+      "time": 9.92,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.3333
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 125,
+      "time": 10.0,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.4167
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 126,
+      "time": 10.08,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.5
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 127,
+      "time": 10.16,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.5833
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 128,
+      "time": 10.24,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.6667
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 129,
+      "time": 10.32,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.75
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 130,
+      "time": 10.4,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.8333
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 131,
+      "time": 10.48,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            1.9167
+          ],
+          "cell": [
+            6,
+            4
+          ],
+          "target_cell": [
+            6,
+            5
+          ]
+        }
+      }
+    },
+    {
+      "t": 132,
+      "time": 10.56,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.0
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 133,
+      "time": 10.64,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.0833
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 134,
+      "time": 10.72,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.1667
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 135,
+      "time": 10.8,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.25
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 136,
+      "time": 10.88,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.3333
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 137,
+      "time": 10.96,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.4167
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 138,
+      "time": 11.04,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.5
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 139,
+      "time": 11.12,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.5833
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 140,
+      "time": 11.2,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.6667
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 141,
+      "time": 11.28,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.75
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 142,
+      "time": 11.36,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.8333
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 143,
+      "time": 11.44,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            2.9167
+          ],
+          "cell": [
+            6,
+            5
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    },
+    {
+      "t": 144,
+      "time": 11.52,
+      "objects": {
+        "agent_1": {
+          "position": [
+            3.0,
+            0.28,
+            3.0
+          ],
+          "cell": [
+            6,
+            6
+          ],
+          "target_cell": [
+            6,
+            6
+          ]
+        }
+      }
+    }
+  ],
+  "summary": {
+    "grid_size": 7,
+    "start": [
+      0,
+      0
+    ],
+    "goal": [
+      6,
+      6
+    ],
+    "path_length": 13,
+    "visited_count": 38,
+    "reached_goal": true,
+    "duration": 11.6
+  }
+}

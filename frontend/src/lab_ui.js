@@ -7,6 +7,10 @@ export function setupLabUi({ onSubmit }) {
   const gravityInput = document.querySelector("#gravityInput");
   const heightInput = document.querySelector("#heightInput");
   const bounceInput = document.querySelector("#bounceInput");
+  const simulationTitle = document.querySelector("#simulationTitle");
+  const simulationSelect = document.querySelector("#simulationSelect");
+  const gravityParams = document.querySelector("#gravityParams");
+  const mazeParams = document.querySelector("#mazeParams");
   const speedSelect = document.querySelector("#speedSelect");
   const runSimulationButton = document.querySelector("#runSimulationButton");
   const playPauseButton = document.querySelector("#playPauseButton");
@@ -44,6 +48,13 @@ export function setupLabUi({ onSubmit }) {
     setSpeech(text) {
       speechBubble.textContent = text;
     },
+    getSelectedSimulation() {
+      return simulationSelect.value;
+    },
+    setSelectedSimulation(simulationName) {
+      simulationSelect.value = simulationName;
+      setSimulationMode(simulationName);
+    },
     getGravityBallParams() {
       return {
         gravity: readNumber(gravityInput, 9.8),
@@ -64,6 +75,17 @@ export function setupLabUi({ onSubmit }) {
         bounceInput.value = params.bounce.toString();
       }
     },
+    getMazeAgentParams() {
+      return {
+        grid_size: 7,
+        steps_per_cell: 12,
+        dt: 0.08,
+        show_search: false,
+      };
+    },
+    setSimulationMode(simulationName) {
+      setSimulationMode(simulationName);
+    },
     setSimulationBusy(isBusy) {
       runSimulationButton.disabled = isBusy;
       loadResultButton.disabled = isBusy;
@@ -77,6 +99,12 @@ export function setupLabUi({ onSubmit }) {
     },
     onRunSimulation(handler) {
       runSimulationButton.addEventListener("click", handler);
+    },
+    onSimulationChange(handler) {
+      simulationSelect.addEventListener("change", () => {
+        setSimulationMode(simulationSelect.value);
+        handler(simulationSelect.value);
+      });
     },
     onLoadResult(handler) {
       loadResultButton.addEventListener("click", handler);
@@ -94,6 +122,13 @@ export function setupLabUi({ onSubmit }) {
       speedSelect.addEventListener("change", () => handler(Number(speedSelect.value)));
     },
   };
+
+  function setSimulationMode(simulationName) {
+    const isMaze = simulationName === "maze_agent";
+    simulationTitle.textContent = simulationName;
+    gravityParams.hidden = isMaze;
+    mazeParams.hidden = !isMaze;
+  }
 }
 
 function addMessage(container, role, text) {

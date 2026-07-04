@@ -13,8 +13,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .llm_client import generate_lab_assistant_response
-from .schemas import ChatRequest, ChatResponse, GravityBallRunRequest, SimulationResult
-from simulations.gravity_ball.sim import GravityBallConfig, load_result, run_and_save
+from .schemas import ChatRequest, ChatResponse, GravityBallRunRequest, MazeAgentRunRequest, SimulationResult
+from simulations.gravity_ball.sim import GravityBallConfig
+from simulations.gravity_ball.sim import load_result as load_gravity_ball_result
+from simulations.gravity_ball.sim import run_and_save as run_gravity_ball_and_save
+from simulations.maze_agent.sim import MazeAgentConfig
+from simulations.maze_agent.sim import load_result as load_maze_agent_result
+from simulations.maze_agent.sim import run_and_save as run_maze_agent_and_save
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
@@ -81,7 +86,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
 @app.get("/simulations/gravity_ball/result", response_model=SimulationResult)
 async def get_gravity_ball_result() -> dict:
-    return load_result()
+    return load_gravity_ball_result()
 
 
 @app.post("/simulations/gravity_ball/run", response_model=SimulationResult)
@@ -93,9 +98,31 @@ async def run_gravity_ball(request: GravityBallRunRequest) -> dict:
         steps=request.steps,
         dt=request.dt,
     )
-    result = run_and_save(config)
+    result = run_gravity_ball_and_save(config)
     _append_experiment_log(
         simulation_name="gravity_ball",
+        parameters=asdict(config),
+        summary=result["summary"],
+    )
+    return result
+
+
+@app.get("/simulations/maze_agent/result", response_model=SimulationResult)
+async def get_maze_agent_result() -> dict:
+    return load_maze_agent_result()
+
+
+@app.post("/simulations/maze_agent/run", response_model=SimulationResult)
+async def run_maze_agent(request: MazeAgentRunRequest) -> dict:
+    config = MazeAgentConfig(
+        grid_size=request.grid_size,
+        steps_per_cell=request.steps_per_cell,
+        dt=request.dt,
+        show_search=request.show_search,
+    )
+    result = run_maze_agent_and_save(config)
+    _append_experiment_log(
+        simulation_name="maze_agent",
         parameters=asdict(config),
         summary=result["summary"],
     )
@@ -117,7 +144,7 @@ def _append_session_log(
     message: str,
     reply: str,
     suggested_action: str | None = None,
-    simulation_params: dict[str, float | int] | None = None,
+    simulation_params: dict[str, float | int | bool] | None = None,
     experiment_spec: dict | None = None,
     codex_task: str | None = None,
     assistant_notes: list[str] | None = None,
@@ -147,7 +174,7 @@ def _append_experiment_log(
     summary: dict,
 ) -> None:
     EXPERIMENT_LOG_DIR.mkdir(parents=True, exist_ok=True)
-    log_path = EXPERIMENT_LOG_DIR / "gravity_ball.jsonl"
+    log_path = EXPERIMENT_LOG_DIR / f"{simulation_name}.jsonl"
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "simulation_name": simulation_name,

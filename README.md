@@ -1,7 +1,7 @@
 # 3D-AI Lab
 
 3D-AI Lab は、学生向けの小さなAI入門ツールです。
-このMVPでは、ブラウザ上の3D空間、ラボ助手チャット、FastAPI連携、会話ログ保存に加えて、Phase 4〜5 の `gravity_ball` シミュレーションを実行・再生できます。
+このMVPでは、ブラウザ上の3D空間、ラボ助手チャット、FastAPI連携、会話ログ保存に加えて、Phase 4〜5 の `gravity_ball` と Phase 7a の `maze_agent` シミュレーションを実行・再生できます。
 
 現時点ではAPIキーや外部LLMサービスは使いません。
 
@@ -15,8 +15,10 @@
 - Codex向けタスク案を生成する
 - `gravity_ball` を実行し、`result.json` を生成する
 - 生成されたボールの落下・反発シミュレーションを3D空間で再生する
+- `maze_agent` を実行し、固定迷路をエージェントが進む様子を3D空間で再生する
 - マウス操作で3D視点を回転、ズーム、パンする
 - 重力、初期高さ、反発係数をUIまたは簡単なチャット指示で変更する
+- チャットで迷路系の指示を入力すると、`maze_agent` を自動実行する
 
 ## 必要なもの
 
@@ -98,6 +100,31 @@ uvicorn backend.app:app --reload
 反発係数を0.4にして
 ```
 
+## Phase 7a: maze_agent の使い方
+
+画面右側のシミュレーション選択で `maze_agent` を選び、`実行` を押します。
+固定された7x7迷路で、エージェントがBFS系の軽量探索で求めた経路に沿ってスタートからゴールへ進みます。
+
+操作ボタンは `gravity_ball` と共通です。
+
+- `実行`: 迷路シミュレーションを再生成して再生する
+- `再生` / `一時停止`: アニメーションを開始・停止する
+- `リセット`: 最初のフレームに戻す
+- `ステップ`: 1フレーム進める
+- `再生速度`: 0.5x、1x、2x、4x を切り替える
+
+チャット欄に次のような文を入力しても、自動で `maze_agent` に切り替えて実行します。
+
+```text
+迷路をエージェントが進む
+迷路のゴールまで進んで
+迷路をエージェントが学習しながら進む
+```
+
+Phase 7a の `maze_agent` は、強化学習ではありません。
+まず確実に3D表示できる軽量探索として実装しています。
+強化学習による方策更新や報酬推移の可視化は後続フェーズの範囲です。
+
 ## Phase 3: ラボ助手
 
 Phase 3は、APIキーなしのルールベース実装です。
@@ -114,8 +141,8 @@ Phase 3は、APIキーなしのルールベース実装です。
 `gravity_ball` に関する入力は、実行可能なシミュレーションとして扱われます。
 たとえば `重力を3にして` は `gravity=3.0` として反映されます。
 
-`迷路をエージェントが学習しながら進む` のような未実装の題材は、現時点では実行しません。
-代わりに、Phase 7以降で実装するための実験案とCodex向けタスク案を表示します。
+`迷路をエージェントが学習しながら進む` のような迷路系の題材は、Phase 7a の `maze_agent` として軽量探索を実行します。
+強化学習そのものは後続フェーズとして案内します。
 
 Codex向けタスク案は生成するだけで、自動実装は行いません。
 自動実装はPhase 6以降の範囲です。
@@ -148,6 +175,22 @@ Invoke-RestMethod `
 Invoke-RestMethod http://127.0.0.1:8000/simulations/gravity_ball/result
 ```
 
+迷路シミュレーション実行API:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/simulations/maze_agent/run `
+  -ContentType "application/json" `
+  -Body '{"grid_size":7,"steps_per_cell":12,"dt":0.08,"show_search":false}'
+```
+
+迷路の最新結果の取得:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/simulations/maze_agent/result
+```
+
 ## ログ
 
 チャット内容は、次の形式で追記保存されます。
@@ -160,6 +203,7 @@ logs/sessions/session_<session_id>.jsonl
 
 ```text
 logs/experiments/gravity_ball.jsonl
+logs/experiments/maze_agent.jsonl
 ```
 
 実行時に作られるJSONLログはGit管理対象外です。
@@ -181,6 +225,11 @@ frontend/
     simulation_viewer.js
 simulations/
   gravity_ball/
+    config.json
+    sim.py
+    result.json
+    README.md
+  maze_agent/
     config.json
     sim.py
     result.json

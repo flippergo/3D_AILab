@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { getGravityBallResult, runGravityBall, sendChatMessage } from "./api_client.js";
+import { getGravityBallResult, getMazeAgentResult, runGravityBall, runMazeAgent, sendChatMessage } from "./api_client.js";
 import { animateLabAssistant, createLabAssistant } from "./avatar.js";
 import { setupLabUi } from "./lab_ui.js";
-import { GravityBallViewer } from "./simulation_viewer.js";
+import { GravityBallViewer, MazeAgentViewer } from "./simulation_viewer.js";
 
 const canvas = document.querySelector("#scene");
 const sessionKey = "3d-ai-lab-session-id";
@@ -43,6 +43,13 @@ addLabFloor(scene);
 
 const clock = new THREE.Clock();
 const gravityBallViewer = new GravityBallViewer(scene);
+const mazeAgentViewer = new MazeAgentViewer(scene);
+const viewers = {
+  gravity_ball: gravityBallViewer,
+  maze_agent: mazeAgentViewer,
+};
+let activeSimulation = "gravity_ball";
+mazeAgentViewer.setVisible(false);
 
 const ui = setupLabUi({
   async onSubmit(message) {
@@ -60,9 +67,16 @@ const ui = setupLabUi({
       ui.setSpeech(response.reply);
 
       if (response.suggested_action === "run_gravity_ball") {
+        switchSimulation("gravity_ball");
         ui.applyGravityBallParams(response.simulation_params ?? {});
         ui.addAssistantMessage("gravity_ball を指定条件で実行します。");
-        await runGravityBallFromUi();
+        await runActiveSimulationFromUi();
+      }
+
+      if (response.suggested_action === "run_maze_agent") {
+        switchSimulation("maze_agent");
+        ui.addAssistantMessage("maze_agent を軽量探索で実行します。");
+        await runActiveSimulationFromUi();
       }
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "チャット送信に失敗しました。";
@@ -73,38 +87,43 @@ const ui = setupLabUi({
 });
 
 ui.addAssistantMessage("こんにちは。ここでは小さな3D実験の相談ができます。");
-ui.onRunSimulation(runGravityBallFromUi);
-ui.onLoadResult(loadLatestGravityBall);
+ui.onRunSimulation(runActiveSimulationFromUi);
+ui.onLoadResult(loadLatestActiveSimulation);
+ui.onSimulationChange(async (simulationName) => {
+  switchSimulation(simulationName);
+  await loadLatestActiveSimulation();
+});
 ui.onTogglePlayback(() => {
-  const isPlaying = gravityBallViewer.togglePlaying();
+  const isPlaying = getActiveViewer().togglePlaying();
   ui.setPlayButton(isPlaying);
 });
 ui.onResetSimulation(() => {
-  gravityBallViewer.reset();
-  gravityBallViewer.setPlaying(false);
+  getActiveViewer().reset();
+  getActiveViewer().setPlaying(false);
   ui.setPlayButton(false);
   updateSimulationStatus();
 });
 ui.onStepSimulation(() => {
-  gravityBallViewer.step();
+  getActiveViewer().step();
   ui.setPlayButton(false);
   updateSimulationStatus();
 });
 ui.onSpeedChange((speed) => {
-  gravityBallViewer.setSpeed(speed);
+  Object.values(viewers).forEach((viewer) => viewer.setSpeed(speed));
   updateSimulationStatus();
 });
 
 resize();
 window.addEventListener("resize", resize);
 requestAnimationFrame(tick);
-loadLatestGravityBall();
+loadLatestActiveSimulation();
 
 function tick() {
   const delta = clock.getDelta();
   const elapsed = clock.elapsedTime;
   animateLabAssistant(assistant, elapsed);
   gravityBallViewer.update(delta);
+  mazeAgentViewer.update(delta);
   controls.update();
   updateSimulationStatus();
   renderer.render(scene, camera);
@@ -149,14 +168,38 @@ function addLabFloor(targetScene) {
   targetScene.add(grid);
 }
 
-async function runGravityBallFromUi() {
+function switchSimulation(simulationName) {
+  activeSimulation = simulationName === "maze_agent" ? "maze_agent" : "gravity_ball";
+  Object.entries(viewers).forEach(([name, viewer]) => {
+    viewer.setVisible(name === activeSimulation);
+    if (name !== activeSimulation) {
+      viewer.setPlaying(false);
+    }
+  });
+  ui.setSelectedSimulation(activeSimulation);
+  ui.setPlayButton(getActiveViewer().getStatus().playing);
+  updateSimulationStatus();
+}
+
+function getActiveViewer() {
+  return viewers[activeSimulation];
+}
+
+async function runActiveSimulationFromUi() {
   ui.setSimulationBusy(true);
   try {
-    const result = await runGravityBall(ui.getGravityBallParams());
-    gravityBallViewer.loadResult(result);
-    gravityBallViewer.setPlaying(true);
+    const result =
+      activeSimulation === "maze_agent"
+        ? await runMazeAgent(ui.getMazeAgentParams())
+        : await runGravityBall(ui.getGravityBallParams());
+    getActiveViewer().loadResult(result);
+    getActiveViewer().setPlaying(true);
     ui.setPlayButton(true);
-    ui.setSpeech("gravity_ball を実行しました。ボールの落下と反発を再生します。");
+    ui.setSpeech(
+      activeSimulation === "maze_agent"
+        ? "maze_agent を実行しました。エージェントが迷路を進む様子を再生します。"
+        : "gravity_ball を実行しました。ボールの落下と反発を再生します。"
+    );
     updateSimulationStatus();
   } catch (error) {
     const message = error instanceof Error ? error.message : "シミュレーションの実行に失敗しました。";
@@ -167,12 +210,14 @@ async function runGravityBallFromUi() {
   }
 }
 
-async function loadLatestGravityBall() {
+async function loadLatestActiveSimulation() {
   ui.setSimulationBusy(true);
   try {
-    const result = await getGravityBallResult();
-    gravityBallViewer.loadResult(result);
-    ui.applyGravityBallParams(result.meta?.parameters ?? {});
+    const result = activeSimulation === "maze_agent" ? await getMazeAgentResult() : await getGravityBallResult();
+    getActiveViewer().loadResult(result);
+    if (activeSimulation === "gravity_ball") {
+      ui.applyGravityBallParams(result.meta?.parameters ?? {});
+    }
     ui.setPlayButton(false);
     updateSimulationStatus();
   } catch (error) {
@@ -184,7 +229,7 @@ async function loadLatestGravityBall() {
 }
 
 function updateSimulationStatus() {
-  const status = gravityBallViewer.getStatus();
+  const status = getActiveViewer().getStatus();
   if (!status.loaded) {
     ui.setSimulationStatus("まだシミュレーション結果は読み込まれていません。");
     return;
@@ -193,6 +238,17 @@ function updateSimulationStatus() {
   const frame = status.frameCount > 0 ? status.frameIndex + 1 : 0;
   const summary = status.summary ?? {};
   const params = status.parameters ?? {};
+  if (activeSimulation === "maze_agent") {
+    ui.setSimulationStatus(
+      [
+        `frame ${frame}/${status.frameCount}`,
+        `迷路 ${summary.grid_size ?? params.grid_size ?? 7}x${summary.grid_size ?? params.grid_size ?? 7} / 経路 ${summary.path_length ?? "-"} マス`,
+        `探索 ${summary.visited_count ?? "-"} マス / ゴール ${summary.reached_goal ? "到達" : "未到達"} / 再生 ${status.playing ? "中" : "停止"}`,
+      ].join("  ")
+    );
+    return;
+  }
+
   ui.setSimulationStatus(
     [
       `frame ${frame}/${status.frameCount}`,

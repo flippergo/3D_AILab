@@ -46,6 +46,34 @@ export async function getGravityBallResult() {
   return response.json();
 }
 
+export async function runMazeAgent(params = {}) {
+  const response = await fetch("/simulations/maze_agent/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "迷路シミュレーションの実行に失敗しました。");
+  }
+
+  return response.json();
+}
+
+export async function getMazeAgentResult() {
+  const response = await fetch("/simulations/maze_agent/result");
+
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    throw new Error(detail || "迷路シミュレーション結果の読み込みに失敗しました。");
+  }
+
+  return response.json();
+}
+
 async function readErrorDetail(response) {
   try {
     const payload = await response.json();

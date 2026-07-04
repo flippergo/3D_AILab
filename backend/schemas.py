@@ -13,7 +13,7 @@ class ChatResponse(BaseModel):
     session_id: str
     timestamp: str
     suggested_action: str | None = None
-    simulation_params: dict[str, float | int] | None = None
+    simulation_params: dict[str, float | int | bool] | None = None
     experiment_spec: dict[str, Any] | None = None
     codex_task: str | None = None
     assistant_notes: list[str] | None = None
@@ -25,6 +25,13 @@ class GravityBallRunRequest(BaseModel):
     bounce: float = Field(default=0.72, ge=0, le=0.98)
     steps: int = Field(default=360, ge=60, le=1200)
     dt: float = Field(default=0.016, gt=0, le=0.1)
+
+
+class MazeAgentRunRequest(BaseModel):
+    grid_size: int = Field(default=7, ge=5, le=11)
+    steps_per_cell: int = Field(default=12, ge=1, le=60)
+    dt: float = Field(default=0.08, gt=0, le=0.5)
+    show_search: bool = False
 
 
 class SimulationResult(BaseModel):

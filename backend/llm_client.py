@@ -15,7 +15,7 @@ class LabAssistantResponse:
     codex_task: str
     assistant_notes: list[str]
     suggested_action: str | None = None
-    simulation_params: dict[str, float | int] | None = None
+    simulation_params: dict[str, float | int | bool] | None = None
 
 
 def generate_lab_assistant_response(message: str, session_id: str) -> LabAssistantResponse:
@@ -48,17 +48,22 @@ def generate_lab_assistant_response(message: str, session_id: str) -> LabAssista
 
     if any(keyword in normalized for keyword in ["迷路", "maze", "エージェント", "agent", "学習", "強化学習"]):
         spec = _maze_agent_spec(cleaned)
+        wants_learning = any(keyword in normalized for keyword in ["学習", "強化学習", "rl", "reinforcement"])
         return LabAssistantResponse(
             reply=(
                 "迷路エージェントの実験案に分解しました。"
-                "現フェーズではまだ実行しませんが、スタート、ゴール、障害物、報酬、学習回数を決めると実装タスクにできます。"
+                "Phase 7aでは強化学習ではなく軽量探索で、スタートからゴールへ進む様子を実行して表示します。"
             ),
             experiment_spec=spec,
             codex_task=build_codex_task(spec),
             assistant_notes=[
-                "maze_agent はPhase 7以降の題材として扱います。",
-                "今回はCodex向けタスク文を生成するところまでです。",
+                "maze_agent はPhase 7aとして実行可能です。",
+                "強化学習は後続フェーズで扱い、今回は固定迷路のBFS系探索として実行します。"
+                if wants_learning
+                else "今回は固定迷路のBFS系探索として実行します。",
             ],
+            suggested_action="run_maze_agent",
+            simulation_params={"grid_size": 7, "steps_per_cell": 12, "dt": 0.08, "show_search": False},
         )
 
     spec = _generic_experiment_spec(cleaned)
@@ -88,8 +93,8 @@ def _looks_like_gravity_ball(message: str) -> bool:
     )
 
 
-def _extract_gravity_ball_params(message: str) -> dict[str, float | int]:
-    params: dict[str, float | int] = {}
+def _extract_gravity_ball_params(message: str) -> dict[str, float | int | bool]:
+    params: dict[str, float | int | bool] = {}
     gravity_value = _extract_number_after_keywords(message, ["重力", "gravity"])
     height_value = _extract_number_after_keywords(message, ["高さ", "height", "初期高さ"])
     bounce_value = _extract_number_after_keywords(message, ["反発係数", "反発", "bounce"])
@@ -117,14 +122,14 @@ def _extract_gravity_ball_params(message: str) -> dict[str, float | int]:
     return params
 
 
-def _gravity_ball_reply(message: str, params: dict[str, float | int]) -> str:
+def _gravity_ball_reply(message: str, params: dict[str, float | int | bool]) -> str:
     if params:
         changes = "、".join(f"{_parameter_label(key)}={value}" for key, value in params.items())
         return f"gravity_ball の実験案に分解しました。今回は {changes} として、落下と反発の変化を観察します。"
     return "gravity_ball の実験案に分解しました。重力、初期高さ、反発係数を変えると、落下の速さや跳ね返り方を比べられます。"
 
 
-def _gravity_ball_spec(message: str, params: dict[str, float | int]) -> dict[str, Any]:
+def _gravity_ball_spec(message: str, params: dict[str, float | int | bool]) -> dict[str, Any]:
     return {
         "title": "重力ボール実験",
         "simulation_name": "gravity_ball",
@@ -145,17 +150,16 @@ def _maze_agent_spec(message: str) -> dict[str, Any]:
     return {
         "title": "迷路エージェント実験",
         "simulation_name": "maze_agent",
-        "goal": "エージェントが迷路内で報酬を手がかりにゴールへ近づく様子を観察する",
+        "goal": "エージェントが固定迷路の壁を避けながらスタートからゴールへ進む様子を観察する",
         "source_message": message,
         "objects": ["迷路の床", "壁", "エージェント", "スタート", "ゴール"],
         "parameters": {
-            "maze_size": "例: 7x7",
-            "episodes": "学習回数",
-            "reward_goal": "ゴール報酬",
-            "penalty_wall": "壁に当たったときのペナルティ",
+            "grid_size": "7x7",
+            "steps_per_cell": "1マス移動あたりの表示フレーム数",
+            "show_search": "探索過程表示の候補",
         },
-        "observations": ["探索の変化", "ゴール到達までのステップ数", "報酬の推移"],
-        "phase": "Phase 7以降の実装候補",
+        "observations": ["壁を避ける経路", "ゴール到達までのステップ数", "最終フレームの到達位置"],
+        "phase": "Phase 7a 実行可能",
     }
 
 

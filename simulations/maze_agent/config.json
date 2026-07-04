@@ -1,0 +1,6 @@
+{
+  "grid_size": 7,
+  "steps_per_cell": 12,
+  "dt": 0.08,
+  "show_search": false
+}

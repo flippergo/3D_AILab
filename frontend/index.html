@@ -133,6 +133,25 @@
         font-size: 15px;
       }
 
+      .simulation-title-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 150px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .simulation-title-row select {
+        min-width: 0;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 9px;
+        background: #0f141b;
+        color: var(--text);
+        font-size: 13px;
+        outline: none;
+      }
+
       .parameter-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -203,6 +222,20 @@
         font-size: 12px;
         line-height: 1.5;
         min-height: 38px;
+      }
+
+      .simulation-note {
+        border: 1px solid rgba(69, 196, 160, 0.24);
+        border-radius: 8px;
+        padding: 10px;
+        background: rgba(69, 196, 160, 0.08);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      [hidden] {
+        display: none !important;
       }
 
       .message {
@@ -304,9 +337,15 @@
           <p>入力した内容はFastAPIに送信され、仮応答がログに保存されます。</p>
         </header>
 
-        <section class="simulation-panel" aria-label="gravity ball controls">
-          <h2>gravity_ball</h2>
-          <div class="parameter-grid">
+        <section class="simulation-panel" aria-label="simulation controls">
+          <div class="simulation-title-row">
+            <h2 id="simulationTitle">gravity_ball</h2>
+            <select id="simulationSelect" aria-label="シミュレーション選択">
+              <option value="gravity_ball" selected>gravity_ball</option>
+              <option value="maze_agent">maze_agent</option>
+            </select>
+          </div>
+          <div id="gravityParams" class="parameter-grid">
             <div class="field">
               <label for="gravityInput">重力</label>
               <input id="gravityInput" type="number" min="0.1" max="50" step="0.1" value="9.8" />
@@ -319,15 +358,18 @@
               <label for="bounceInput">反発係数</label>
               <input id="bounceInput" type="number" min="0" max="0.98" step="0.01" value="0.72" />
             </div>
-            <div class="field">
-              <label for="speedSelect">再生速度</label>
-              <select id="speedSelect">
-                <option value="0.5">0.5x</option>
-                <option value="1" selected>1x</option>
-                <option value="2">2x</option>
-                <option value="4">4x</option>
-              </select>
-            </div>
+          </div>
+          <div id="mazeParams" class="simulation-note" hidden>
+            固定7x7迷路を軽量探索で解きます。現時点では強化学習ではなく、スタートからゴールまでの経路を3D再生します。
+          </div>
+          <div class="field">
+            <label for="speedSelect">再生速度</label>
+            <select id="speedSelect">
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="2">2x</option>
+              <option value="4">4x</option>
+            </select>
           </div>
           <button id="runSimulationButton" class="run-button" type="button">実行</button>
           <div class="simulation-actions">
