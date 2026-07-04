@@ -13,7 +13,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .llm_client import generate_lab_assistant_response
-from .schemas import ChatRequest, ChatResponse, GravityBallRunRequest, MazeAgentRunRequest, SimulationResult
+from .schemas import ChatRequest, ChatResponse, FlockingRunRequest, GravityBallRunRequest, MazeAgentRunRequest, SimulationResult
+from simulations.flocking.sim import FlockingConfig
+from simulations.flocking.sim import load_result as load_flocking_result
+from simulations.flocking.sim import run_and_save as run_flocking_and_save
 from simulations.gravity_ball.sim import GravityBallConfig
 from simulations.gravity_ball.sim import load_result as load_gravity_ball_result
 from simulations.gravity_ball.sim import run_and_save as run_gravity_ball_and_save
@@ -126,6 +129,34 @@ async def run_maze_agent(request: MazeAgentRunRequest) -> dict:
     result = run_maze_agent_and_save(config)
     _append_experiment_log(
         simulation_name="maze_agent",
+        parameters=asdict(config),
+        summary=result["summary"],
+    )
+    return result
+
+
+@app.get("/simulations/flocking/result", response_model=SimulationResult)
+async def get_flocking_result() -> dict:
+    return load_flocking_result()
+
+
+@app.post("/simulations/flocking/run", response_model=SimulationResult)
+async def run_flocking(request: FlockingRunRequest) -> dict:
+    config = FlockingConfig(
+        agent_count=request.agent_count,
+        steps=request.steps,
+        dt=request.dt,
+        seed=request.seed,
+        cohesion_weight=request.cohesion_weight,
+        alignment_weight=request.alignment_weight,
+        separation_weight=request.separation_weight,
+        perception_radius=request.perception_radius,
+        separation_radius=request.separation_radius,
+        bounds=request.bounds,
+    )
+    result = run_flocking_and_save(config)
+    _append_experiment_log(
+        simulation_name="flocking",
         parameters=asdict(config),
         summary=result["summary"],
     )

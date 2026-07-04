@@ -15,6 +15,12 @@ export function setupLabUi({ onSubmit }) {
   const mazeSizeInput = document.querySelector("#mazeSizeInput");
   const mazeDensityInput = document.querySelector("#mazeDensityInput");
   const mazeSeedInput = document.querySelector("#mazeSeedInput");
+  const flockingParams = document.querySelector("#flockingParams");
+  const flockingCountInput = document.querySelector("#flockingCountInput");
+  const flockingSeedInput = document.querySelector("#flockingSeedInput");
+  const cohesionInput = document.querySelector("#cohesionInput");
+  const alignmentInput = document.querySelector("#alignmentInput");
+  const separationInput = document.querySelector("#separationInput");
   const speedSelect = document.querySelector("#speedSelect");
   const runSimulationButton = document.querySelector("#runSimulationButton");
   const playPauseButton = document.querySelector("#playPauseButton");
@@ -108,6 +114,41 @@ export function setupLabUi({ onSubmit }) {
         mazeSeedInput.value = params.seed.toString();
       }
     },
+    getFlockingParams() {
+      const seed = readOptionalInteger(flockingSeedInput);
+      const params = {
+        agent_count: clampNumber(readNumber(flockingCountInput, 30), 10, 80),
+        steps: 360,
+        dt: 0.08,
+        cohesion_weight: clampNumber(readNumber(cohesionInput, 0.55), 0, 2),
+        alignment_weight: clampNumber(readNumber(alignmentInput, 0.65), 0, 2),
+        separation_weight: clampNumber(readNumber(separationInput, 1.25), 0, 3),
+        perception_radius: 2.2,
+        separation_radius: 0.7,
+        bounds: 6.0,
+      };
+      if (seed !== null) {
+        params.seed = seed;
+      }
+      return params;
+    },
+    applyFlockingParams(params = {}) {
+      if (typeof params.agent_count === "number") {
+        flockingCountInput.value = params.agent_count.toString();
+      }
+      if (typeof params.seed === "number") {
+        flockingSeedInput.value = params.seed.toString();
+      }
+      if (typeof params.cohesion_weight === "number") {
+        cohesionInput.value = params.cohesion_weight.toString();
+      }
+      if (typeof params.alignment_weight === "number") {
+        alignmentInput.value = params.alignment_weight.toString();
+      }
+      if (typeof params.separation_weight === "number") {
+        separationInput.value = params.separation_weight.toString();
+      }
+    },
     setSimulationMode(simulationName) {
       setSimulationMode(simulationName);
     },
@@ -150,9 +191,11 @@ export function setupLabUi({ onSubmit }) {
 
   function setSimulationMode(simulationName) {
     const isMaze = simulationName === "maze_agent";
+    const isFlocking = simulationName === "flocking";
     simulationTitle.textContent = simulationName;
-    gravityParams.hidden = isMaze;
+    gravityParams.hidden = isMaze || isFlocking;
     mazeParams.hidden = !isMaze;
+    flockingParams.hidden = !isFlocking;
   }
 }
 

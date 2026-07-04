@@ -1,0 +1,12 @@
+{
+  "agent_count": 30,
+  "steps": 360,
+  "dt": 0.08,
+  "seed": null,
+  "cohesion_weight": 0.55,
+  "alignment_weight": 0.65,
+  "separation_weight": 1.25,
+  "perception_radius": 2.2,
+  "separation_radius": 0.7,
+  "bounds": 6.0
+}

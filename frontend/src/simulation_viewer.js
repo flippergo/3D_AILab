@@ -396,6 +396,162 @@ export class MazeAgentViewer {
   }
 }
 
+export class FlockingViewer {
+  constructor(scene) {
+    this.scene = scene;
+    this.group = new THREE.Group();
+    this.group.name = "flocking-viewer";
+    this.group.position.set(0.6, 0.1, -0.2);
+    this.scene.add(this.group);
+
+    this.result = null;
+    this.agents = new Map();
+    this.frameIndex = 0;
+    this.frameCursor = 0;
+    this.playing = false;
+    this.speed = 1;
+  }
+
+  loadResult(result) {
+    this.clear();
+    this.result = result;
+    this.frameIndex = 0;
+    this.frameCursor = 0;
+    this.playing = false;
+
+    this.addBounds(result.summary?.bounds ?? result.meta?.parameters?.bounds ?? 6);
+    (result.objects ?? []).forEach((object) => {
+      if (object.type !== "boid") {
+        return;
+      }
+      const color = new THREE.Color(object.color ?? "#8fd3ff");
+      const agent = new THREE.Mesh(
+        new THREE.ConeGeometry(object.radius ?? 0.14, 0.42, 18),
+        new THREE.MeshStandardMaterial({
+          color,
+          roughness: 0.42,
+          metalness: 0.04,
+          emissive: color.clone().multiplyScalar(0.12),
+        })
+      );
+      agent.name = object.id;
+      agent.castShadow = true;
+      this.agents.set(object.id, agent);
+      this.group.add(agent);
+    });
+
+    this.applyFrame(0);
+  }
+
+  clear() {
+    while (this.group.children.length > 0) {
+      const child = this.group.children.pop();
+      child.traverse?.((object) => {
+        object.geometry?.dispose?.();
+        object.material?.dispose?.();
+      });
+    }
+    this.agents.clear();
+  }
+
+  setVisible(visible) {
+    this.group.visible = visible;
+  }
+
+  setPlaying(playing) {
+    this.playing = playing;
+  }
+
+  togglePlaying() {
+    this.playing = !this.playing;
+    return this.playing;
+  }
+
+  setSpeed(speed) {
+    this.speed = Number(speed) || 1;
+  }
+
+  reset() {
+    this.frameIndex = 0;
+    this.frameCursor = 0;
+    this.applyFrame(0);
+  }
+
+  step() {
+    if (!this.result?.frames?.length) {
+      return;
+    }
+    this.playing = false;
+    this.frameIndex = Math.min(this.frameIndex + 1, this.result.frames.length - 1);
+    this.frameCursor = this.frameIndex;
+    this.applyFrame(this.frameIndex);
+  }
+
+  update(deltaSeconds) {
+    if (!this.playing || !this.result?.frames?.length) {
+      return;
+    }
+
+    const dt = this.result.meta?.dt ?? 0.08;
+    this.frameCursor += (deltaSeconds / dt) * this.speed;
+    if (this.frameCursor >= this.result.frames.length - 1) {
+      this.frameCursor = this.result.frames.length - 1;
+      this.playing = false;
+    }
+
+    this.frameIndex = Math.floor(this.frameCursor);
+    this.applyFrame(this.frameIndex);
+  }
+
+  getStatus() {
+    const frameCount = this.result?.frames?.length ?? 0;
+    return {
+      loaded: frameCount > 0,
+      playing: this.playing,
+      frameIndex: this.frameIndex,
+      frameCount,
+      summary: this.result?.summary,
+      parameters: this.result?.meta?.parameters,
+    };
+  }
+
+  applyFrame(index) {
+    if (!this.result?.frames?.length) {
+      return;
+    }
+
+    const frameObjects = this.result.frames[index]?.objects ?? {};
+    this.agents.forEach((agent, id) => {
+      const state = frameObjects[id];
+      if (!state?.position) {
+        return;
+      }
+      agent.position.set(state.position[0], state.position[1], state.position[2]);
+      if (state.velocity) {
+        const direction = new THREE.Vector3(state.velocity[0], state.velocity[1], state.velocity[2]).normalize();
+        if (direction.lengthSq() > 0.0001) {
+          agent.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+        }
+      }
+    });
+  }
+
+  addBounds(bounds) {
+    const size = bounds * 2;
+    const geometry = new THREE.BoxGeometry(size, bounds * 0.75, size);
+    const edges = new THREE.EdgesGeometry(geometry);
+    const material = new THREE.LineBasicMaterial({
+      color: 0x45c4a0,
+      transparent: true,
+      opacity: 0.28,
+    });
+    const box = new THREE.LineSegments(edges, material);
+    box.name = "flocking-bounds";
+    box.position.y = bounds * 0.375;
+    this.group.add(box);
+  }
+}
+
 function cellToWorld(cell, gridSize) {
   const offset = (gridSize - 1) / 2;
   return [cell[0] - offset, 0, cell[1] - offset];

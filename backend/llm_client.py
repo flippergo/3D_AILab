@@ -46,6 +46,21 @@ def generate_lab_assistant_response(message: str, session_id: str) -> LabAssista
             simulation_params=params or None,
         )
 
+    if any(keyword in normalized for keyword in ["群れ", "鳥", "魚", "flocking", "boids", "boid"]):
+        params = _extract_flocking_params(normalized)
+        spec = _flocking_spec(cleaned, params)
+        return LabAssistantResponse(
+            reply="flocking の実験案に分解しました。複数エージェントが近くの仲間に合わせて群れ行動する様子を実行して表示します。",
+            experiment_spec=spec,
+            codex_task=build_codex_task(spec),
+            assistant_notes=[
+                "flocking はPhase 7bとして実行可能です。",
+                "強化学習ではなく、Boids風のルールベースシミュレーションとして実行します。",
+            ],
+            suggested_action="run_flocking",
+            simulation_params=params,
+        )
+
     if any(keyword in normalized for keyword in ["迷路", "maze", "エージェント", "agent", "学習", "強化学習"]):
         spec = _maze_agent_spec(cleaned)
         wants_learning = any(keyword in normalized for keyword in ["学習", "強化学習", "rl", "reinforcement"])
@@ -130,6 +145,32 @@ def _extract_gravity_ball_params(message: str) -> dict[str, float | int | bool]:
     return params
 
 
+def _extract_flocking_params(message: str) -> dict[str, float | int | bool]:
+    params: dict[str, float | int | bool] = {
+        "agent_count": 30,
+        "steps": 360,
+        "dt": 0.08,
+        "cohesion_weight": 0.55,
+        "alignment_weight": 0.65,
+        "separation_weight": 1.25,
+        "perception_radius": 2.2,
+        "separation_radius": 0.7,
+        "bounds": 6.0,
+    }
+    count = _extract_number_after_keywords(message, ["個体", "数", "agent", "boid"])
+    if count is not None:
+        params["agent_count"] = int(_clamp(count, 10, 80))
+    if any(keyword in message for keyword in ["たくさん", "多く", "増や"]):
+        params["agent_count"] = 50
+    if any(keyword in message for keyword in ["少な", "小さ"]):
+        params["agent_count"] = 15
+    if any(keyword in message for keyword in ["まとま", "集ま", "密"]):
+        params["cohesion_weight"] = 0.9
+    if any(keyword in message for keyword in ["ばら", "散ら"]):
+        params["separation_weight"] = 1.8
+    return params
+
+
 def _gravity_ball_reply(message: str, params: dict[str, float | int | bool]) -> str:
     if params:
         changes = "、".join(f"{_parameter_label(key)}={value}" for key, value in params.items())
@@ -171,6 +212,25 @@ def _maze_agent_spec(message: str) -> dict[str, Any]:
         },
         "observations": ["壁を避ける経路", "ゴール到達までのステップ数", "最終フレームの到達位置"],
         "phase": "Phase 7a 実行可能",
+    }
+
+
+def _flocking_spec(message: str, params: dict[str, float | int | bool]) -> dict[str, Any]:
+    return {
+        "title": "群れ行動実験",
+        "simulation_name": "flocking",
+        "goal": "複数エージェントが近くの仲間へ寄り、向きを合わせ、近すぎる相手から離れることで群れを作る様子を観察する",
+        "source_message": message,
+        "objects": ["群れエージェント", "移動範囲", "進行方向"],
+        "parameters": {
+            "agent_count": params.get("agent_count", 30),
+            "cohesion_weight": params.get("cohesion_weight", 0.55),
+            "alignment_weight": params.get("alignment_weight", 0.65),
+            "separation_weight": params.get("separation_weight", 1.25),
+            "seed": "任意",
+        },
+        "observations": ["群れのまとまり", "個体間距離", "進行方向の揃い方", "パラメータ変更による軌道の違い"],
+        "phase": "Phase 7b 実行可能",
     }
 
 

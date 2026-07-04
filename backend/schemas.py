@@ -37,6 +37,19 @@ class MazeAgentRunRequest(BaseModel):
     wall_density: float = Field(default=0.32, ge=0, le=1)
 
 
+class FlockingRunRequest(BaseModel):
+    agent_count: int = Field(default=30, ge=10, le=80)
+    steps: int = Field(default=360, ge=120, le=900)
+    dt: float = Field(default=0.08, ge=0.02, le=0.2)
+    seed: int | None = Field(default=None, ge=0, le=999999)
+    cohesion_weight: float = Field(default=0.55, ge=0, le=2)
+    alignment_weight: float = Field(default=0.65, ge=0, le=2)
+    separation_weight: float = Field(default=1.25, ge=0, le=3)
+    perception_radius: float = Field(default=2.2, ge=0.6, le=5)
+    separation_radius: float = Field(default=0.7, ge=0.2, le=2)
+    bounds: float = Field(default=6.0, ge=3, le=12)
+
+
 class SimulationResult(BaseModel):
     meta: dict[str, Any]
     objects: list[dict[str, Any]]

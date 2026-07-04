@@ -363,6 +363,7 @@
             <select id="simulationSelect" aria-label="シミュレーション選択">
               <option value="gravity_ball" selected>gravity_ball</option>
               <option value="maze_agent">maze_agent</option>
+              <option value="flocking">flocking</option>
             </select>
           </div>
           <div id="gravityParams" class="parameter-grid">
@@ -403,6 +404,33 @@
               <div class="field">
                 <label for="mazeSeedInput">シード</label>
                 <input id="mazeSeedInput" type="number" min="1" max="999999" step="1" placeholder="空なら毎回変更" />
+              </div>
+            </div>
+          </div>
+          <div id="flockingParams" class="maze-controls" hidden>
+            <div class="simulation-note">
+              複数エージェントが近くの仲間に寄り、向きを合わせ、近すぎる相手から離れるBoids風の群れ行動を3D再生します。
+            </div>
+            <div class="parameter-grid">
+              <div class="field">
+                <label for="flockingCountInput">個体数</label>
+                <input id="flockingCountInput" type="number" min="10" max="80" step="1" value="30" />
+              </div>
+              <div class="field">
+                <label for="flockingSeedInput">シード</label>
+                <input id="flockingSeedInput" type="number" min="0" max="999999" step="1" placeholder="空なら毎回変更" />
+              </div>
+              <div class="field">
+                <label for="cohesionInput">まとまり</label>
+                <input id="cohesionInput" type="number" min="0" max="2" step="0.05" value="0.55" />
+              </div>
+              <div class="field">
+                <label for="alignmentInput">向き合わせ</label>
+                <input id="alignmentInput" type="number" min="0" max="2" step="0.05" value="0.65" />
+              </div>
+              <div class="field">
+                <label for="separationInput">距離確保</label>
+                <input id="separationInput" type="number" min="0" max="3" step="0.05" value="1.25" />
               </div>
             </div>
           </div>

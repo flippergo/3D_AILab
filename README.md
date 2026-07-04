@@ -1,7 +1,7 @@
 # 3D-AI Lab
 
 3D-AI Lab は、学生向けの小さなAI入門ツールです。
-このMVPでは、ブラウザ上の3D空間、ラボ助手チャット、FastAPI連携、会話ログ保存に加えて、Phase 4〜5 の `gravity_ball` と Phase 7a の `maze_agent` シミュレーションを実行・再生できます。
+このMVPでは、ブラウザ上の3D空間、ラボ助手チャット、FastAPI連携、会話ログ保存に加えて、Phase 4〜5 の `gravity_ball`、Phase 7a の `maze_agent`、Phase 7b の `flocking` シミュレーションを実行・再生できます。
 
 現時点ではAPIキーや外部LLMサービスは使いません。
 
@@ -16,9 +16,11 @@
 - `gravity_ball` を実行し、`result.json` を生成する
 - 生成されたボールの落下・反発シミュレーションを3D空間で再生する
 - `maze_agent` を実行し、固定迷路をエージェントが進む様子を3D空間で再生する
+- `flocking` を実行し、複数エージェントのBoids風の群れ行動を3D空間で再生する
 - マウス操作で3D視点を回転、ズーム、パンする
 - 重力、初期高さ、反発係数をUIまたは簡単なチャット指示で変更する
 - チャットで迷路系の指示を入力すると、`maze_agent` を自動実行する
+- チャットで群れ、鳥、魚、flocking、boids 系の指示を入力すると、`flocking` を自動実行する
 
 ## 必要なもの
 
@@ -133,6 +135,31 @@ Phase 7a の `maze_agent` は、強化学習ではありません。
 まず確実に3D表示できる軽量探索として実装しています。
 強化学習による方策更新や報酬推移の可視化は後続フェーズの範囲です。
 
+## Phase 7b: flocking の使い方
+
+画面右側のシミュレーション選択で `flocking` を選び、`実行` を押します。
+複数の小さな円錐が、進行方向を向きながら3D空間内を移動します。
+
+`flocking` は強化学習ではなく、Boids風の簡易ルールで実装しています。
+
+- `群れのまとまり`: 近くの個体の中心へ寄る強さ
+- `向き合わせ`: 近くの個体の速度方向へ揃える強さ
+- `距離確保`: 近すぎる個体から離れる強さ
+- `個体数`: 表示するエージェント数
+- `シード`: 同じ初期配置と軌道を再現するための番号
+
+チャット欄に次のような文を入れても、自動で `flocking` に切り替えて実行します。
+
+```text
+鳥の群れを動かして
+魚の群れを表示して
+たくさんの個体で群れを作って
+まとまった群れにして
+ばらける群れにして
+```
+
+観察ポイントは、群れのまとまり方、進行方向の揃い方、近すぎる個体が離れる様子、重みを変えたときの軌道の違いです。
+
 ## Phase 3: ラボ助手
 
 Phase 3は、APIキーなしのルールベース実装です。
@@ -199,6 +226,22 @@ Invoke-RestMethod `
 Invoke-RestMethod http://127.0.0.1:8000/simulations/maze_agent/result
 ```
 
+群れ行動シミュレーション実行API:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/simulations/flocking/run `
+  -ContentType "application/json" `
+  -Body '{"agent_count":30,"steps":360,"dt":0.08,"seed":123,"cohesion_weight":0.55,"alignment_weight":0.65,"separation_weight":1.25,"perception_radius":2.2,"separation_radius":0.7,"bounds":6.0}'
+```
+
+群れ行動の最新結果の取得:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/simulations/flocking/result
+```
+
 ## ログ
 
 チャット内容は、次の形式で追記保存されます。
@@ -212,6 +255,7 @@ logs/sessions/session_<session_id>.jsonl
 ```text
 logs/experiments/gravity_ball.jsonl
 logs/experiments/maze_agent.jsonl
+logs/experiments/flocking.jsonl
 ```
 
 実行時に作られるJSONLログはGit管理対象外です。
@@ -238,6 +282,11 @@ simulations/
     result.json
     README.md
   maze_agent/
+    config.json
+    sim.py
+    result.json
+    README.md
+  flocking/
     config.json
     sim.py
     result.json
