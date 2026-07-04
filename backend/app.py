@@ -119,6 +119,9 @@ async def run_maze_agent(request: MazeAgentRunRequest) -> dict:
         steps_per_cell=request.steps_per_cell,
         dt=request.dt,
         show_search=request.show_search,
+        randomize=request.randomize,
+        seed=request.seed,
+        wall_density=request.wall_density,
     )
     result = run_maze_agent_and_save(config)
     _append_experiment_log(

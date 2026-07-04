@@ -28,10 +28,13 @@ class GravityBallRunRequest(BaseModel):
 
 
 class MazeAgentRunRequest(BaseModel):
-    grid_size: int = Field(default=7, ge=5, le=11)
-    steps_per_cell: int = Field(default=12, ge=1, le=60)
+    grid_size: int = Field(default=7, ge=3, le=25)
+    steps_per_cell: int = Field(default=12, ge=1, le=120)
     dt: float = Field(default=0.08, gt=0, le=0.5)
     show_search: bool = False
+    randomize: bool = False
+    seed: int | None = Field(default=None, ge=0, le=999999)
+    wall_density: float = Field(default=0.32, ge=0, le=1)
 
 
 class SimulationResult(BaseModel):

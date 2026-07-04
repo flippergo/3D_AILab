@@ -234,6 +234,26 @@
         line-height: 1.5;
       }
 
+      .maze-controls {
+        display: grid;
+        gap: 10px;
+      }
+
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 32px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .toggle-row input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+      }
+
       [hidden] {
         display: none !important;
       }
@@ -359,8 +379,32 @@
               <input id="bounceInput" type="number" min="0" max="0.98" step="0.01" value="0.72" />
             </div>
           </div>
-          <div id="mazeParams" class="simulation-note" hidden>
-            固定7x7迷路を軽量探索で解きます。現時点では強化学習ではなく、スタートからゴールまでの経路を3D再生します。
+          <div id="mazeParams" class="maze-controls" hidden>
+            <div class="simulation-note">
+              固定迷路またはランダム迷路を軽量探索で解きます。現時点では強化学習ではなく、スタートからゴールまでの経路を3D再生します。
+            </div>
+            <label class="toggle-row" for="mazeRandomInput">
+              <input id="mazeRandomInput" type="checkbox" />
+              ランダム迷路を生成
+            </label>
+            <div class="parameter-grid">
+              <div class="field">
+                <label for="mazeSizeInput">迷路サイズ</label>
+                <select id="mazeSizeInput">
+                  <option value="7" selected>7x7</option>
+                  <option value="9">9x9</option>
+                  <option value="11">11x11</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="mazeDensityInput">壁の多さ</label>
+                <input id="mazeDensityInput" type="number" min="0.05" max="0.55" step="0.05" value="0.32" />
+              </div>
+              <div class="field">
+                <label for="mazeSeedInput">シード</label>
+                <input id="mazeSeedInput" type="number" min="1" max="999999" step="1" placeholder="空なら毎回変更" />
+              </div>
+            </div>
           </div>
           <div class="field">
             <label for="speedSelect">再生速度</label>

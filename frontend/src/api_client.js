@@ -77,7 +77,13 @@ export async function getMazeAgentResult() {
 async function readErrorDetail(response) {
   try {
     const payload = await response.json();
-    return payload.detail;
+    if (typeof payload.detail === "string") {
+      return payload.detail;
+    }
+    if (payload.detail) {
+      return JSON.stringify(payload.detail);
+    }
+    return JSON.stringify(payload);
   } catch {
     return "";
   }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 from collections import deque
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -32,15 +33,15 @@ class MazeAgentConfig:
     steps_per_cell: int = 12
     dt: float = 0.08
     show_search: bool = False
+    randomize: bool = False
+    seed: int | None = None
+    wall_density: float = 0.32
 
 
 def run_simulation(config: MazeAgentConfig) -> dict[str, Any]:
-    grid_size = _clamp_int(config.grid_size, 5, 11)
-    if grid_size != 7:
-        grid_size = 7
-
+    grid_size, start, goal, walls, seed, maze_type, wall_density = _resolve_layout(config)
     steps_per_cell = _clamp_int(config.steps_per_cell, 1, 60)
-    path, visited = _find_path(grid_size, START, GOAL, WALLS)
+    path, visited = _find_path(grid_size, start, goal, walls)
     frames = _build_frames(path, steps_per_cell, config.dt, grid_size)
 
     return {
@@ -52,17 +53,23 @@ def run_simulation(config: MazeAgentConfig) -> dict[str, Any]:
                 **asdict(config),
                 "grid_size": grid_size,
                 "steps_per_cell": steps_per_cell,
+                "seed": seed,
+                "wall_density": wall_density,
             },
         },
-        "objects": _build_objects(grid_size, START, GOAL, WALLS, path),
+        "objects": _build_objects(grid_size, start, goal, walls, path),
         "frames": frames,
         "summary": {
+            "maze_type": maze_type,
             "grid_size": grid_size,
-            "start": list(START),
-            "goal": list(GOAL),
+            "start": list(start),
+            "goal": list(goal),
+            "seed": seed,
+            "wall_density": wall_density,
+            "wall_count": len(walls),
             "path_length": len(path),
             "visited_count": len(visited),
-            "reached_goal": bool(path and path[-1] == GOAL),
+            "reached_goal": bool(path and path[-1] == goal),
             "duration": round(len(frames) * config.dt, 4),
         },
     }
@@ -90,6 +97,63 @@ def run_and_save(config: MazeAgentConfig, path: Path = RESULT_PATH) -> dict[str,
     result = run_simulation(config)
     write_result(result, path)
     return result
+
+
+def _resolve_layout(
+    config: MazeAgentConfig,
+) -> tuple[int, tuple[int, int], tuple[int, int], set[tuple[int, int]], int | None, str, float]:
+    if not config.randomize:
+        return 7, START, GOAL, set(WALLS), None, "fixed", 0.0
+
+    grid_size = _normalize_grid_size(config.grid_size)
+    start = (0, 0)
+    goal = (grid_size - 1, grid_size - 1)
+    seed = config.seed if config.seed is not None else random.SystemRandom().randrange(1, 1_000_000)
+    wall_density = _clamp_float(config.wall_density, 0.05, 0.55)
+    walls = _generate_random_walls(grid_size, start, goal, wall_density, seed)
+    return grid_size, start, goal, walls, seed, "random", wall_density
+
+
+def _generate_random_walls(
+    grid_size: int,
+    start: tuple[int, int],
+    goal: tuple[int, int],
+    wall_density: float,
+    seed: int,
+) -> set[tuple[int, int]]:
+    rng = random.Random(seed)
+    guaranteed_path = _random_reference_path(grid_size, start, goal, rng)
+    candidates = [
+        (x, z)
+        for x in range(grid_size)
+        for z in range(grid_size)
+        if (x, z) not in guaranteed_path and (x, z) not in {start, goal}
+    ]
+    rng.shuffle(candidates)
+    wall_count = round(len(candidates) * wall_density)
+    return set(candidates[:wall_count])
+
+
+def _random_reference_path(
+    grid_size: int,
+    start: tuple[int, int],
+    goal: tuple[int, int],
+    rng: random.Random,
+) -> set[tuple[int, int]]:
+    x, z = start
+    cells = {start}
+    moves = ["x"] * (goal[0] - start[0]) + ["z"] * (goal[1] - start[1])
+    rng.shuffle(moves)
+
+    for move in moves:
+        if move == "x":
+            x = min(x + 1, grid_size - 1)
+        else:
+            z = min(z + 1, grid_size - 1)
+        cells.add((x, z))
+
+    cells.add(goal)
+    return cells
 
 
 def _find_path(
@@ -244,6 +308,17 @@ def _world_position(cell: tuple[int, int], grid_size: int) -> list[float]:
 
 def _clamp_int(value: int, minimum: int, maximum: int) -> int:
     return min(max(int(value), minimum), maximum)
+
+
+def _clamp_float(value: float, minimum: float, maximum: float) -> float:
+    return min(max(float(value), minimum), maximum)
+
+
+def _normalize_grid_size(value: int) -> int:
+    grid_size = _clamp_int(value, 5, 11)
+    if grid_size % 2 == 0:
+        grid_size += 1 if grid_size < 11 else -1
+    return grid_size
 
 
 if __name__ == "__main__":

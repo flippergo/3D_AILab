@@ -49,6 +49,7 @@ def generate_lab_assistant_response(message: str, session_id: str) -> LabAssista
     if any(keyword in normalized for keyword in ["迷路", "maze", "エージェント", "agent", "学習", "強化学習"]):
         spec = _maze_agent_spec(cleaned)
         wants_learning = any(keyword in normalized for keyword in ["学習", "強化学習", "rl", "reinforcement"])
+        wants_random = any(keyword in normalized for keyword in ["ランダム", "random", "毎回", "生成"])
         return LabAssistantResponse(
             reply=(
                 "迷路エージェントの実験案に分解しました。"
@@ -63,7 +64,14 @@ def generate_lab_assistant_response(message: str, session_id: str) -> LabAssista
                 else "今回は固定迷路のBFS系探索として実行します。",
             ],
             suggested_action="run_maze_agent",
-            simulation_params={"grid_size": 7, "steps_per_cell": 12, "dt": 0.08, "show_search": False},
+            simulation_params={
+                "grid_size": 9 if wants_random else 7,
+                "steps_per_cell": 12,
+                "dt": 0.08,
+                "show_search": False,
+                "randomize": wants_random,
+                "wall_density": 0.32,
+            },
         )
 
     spec = _generic_experiment_spec(cleaned)
@@ -154,8 +162,11 @@ def _maze_agent_spec(message: str) -> dict[str, Any]:
         "source_message": message,
         "objects": ["迷路の床", "壁", "エージェント", "スタート", "ゴール"],
         "parameters": {
-            "grid_size": "7x7",
+            "grid_size": "7x7、9x9、11x11",
             "steps_per_cell": "1マス移動あたりの表示フレーム数",
+            "randomize": "ランダム迷路を生成するか",
+            "seed": "同じ迷路を再現するための番号",
+            "wall_density": "壁の多さ",
             "show_search": "探索過程表示の候補",
         },
         "observations": ["壁を避ける経路", "ゴール到達までのステップ数", "最終フレームの到達位置"],

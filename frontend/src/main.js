@@ -75,6 +75,7 @@ const ui = setupLabUi({
 
       if (response.suggested_action === "run_maze_agent") {
         switchSimulation("maze_agent");
+        ui.applyMazeAgentParams(response.simulation_params ?? {});
         ui.addAssistantMessage("maze_agent を軽量探索で実行します。");
         await runActiveSimulationFromUi();
       }
@@ -188,10 +189,8 @@ function getActiveViewer() {
 async function runActiveSimulationFromUi() {
   ui.setSimulationBusy(true);
   try {
-    const result =
-      activeSimulation === "maze_agent"
-        ? await runMazeAgent(ui.getMazeAgentParams())
-        : await runGravityBall(ui.getGravityBallParams());
+    const params = activeSimulation === "maze_agent" ? ui.getMazeAgentParams() : ui.getGravityBallParams();
+    const result = activeSimulation === "maze_agent" ? await runMazeAgent(params) : await runGravityBall(params);
     getActiveViewer().loadResult(result);
     getActiveViewer().setPlaying(true);
     ui.setPlayButton(true);
@@ -203,7 +202,7 @@ async function runActiveSimulationFromUi() {
     updateSimulationStatus();
   } catch (error) {
     const message = error instanceof Error ? error.message : "シミュレーションの実行に失敗しました。";
-    ui.addError(message);
+    ui.addError(`${activeSimulation} の実行に失敗しました: ${message}`);
     ui.setSpeech("シミュレーションの実行に失敗しました。");
   } finally {
     ui.setSimulationBusy(false);
@@ -217,6 +216,8 @@ async function loadLatestActiveSimulation() {
     getActiveViewer().loadResult(result);
     if (activeSimulation === "gravity_ball") {
       ui.applyGravityBallParams(result.meta?.parameters ?? {});
+    } else {
+      ui.applyMazeAgentParams(result.meta?.parameters ?? {});
     }
     ui.setPlayButton(false);
     updateSimulationStatus();
@@ -239,11 +240,12 @@ function updateSimulationStatus() {
   const summary = status.summary ?? {};
   const params = status.parameters ?? {};
   if (activeSimulation === "maze_agent") {
+    const mazeKind = summary.maze_type === "random" ? `ランダム seed ${summary.seed ?? "-"}` : "固定";
     ui.setSimulationStatus(
       [
         `frame ${frame}/${status.frameCount}`,
-        `迷路 ${summary.grid_size ?? params.grid_size ?? 7}x${summary.grid_size ?? params.grid_size ?? 7} / 経路 ${summary.path_length ?? "-"} マス`,
-        `探索 ${summary.visited_count ?? "-"} マス / ゴール ${summary.reached_goal ? "到達" : "未到達"} / 再生 ${status.playing ? "中" : "停止"}`,
+        `${mazeKind} / 迷路 ${summary.grid_size ?? params.grid_size ?? 7}x${summary.grid_size ?? params.grid_size ?? 7}`,
+        `壁 ${summary.wall_count ?? "-"} / 経路 ${summary.path_length ?? "-"} マス / ゴール ${summary.reached_goal ? "到達" : "未到達"} / 再生 ${status.playing ? "中" : "停止"}`,
       ].join("  ")
     );
     return;

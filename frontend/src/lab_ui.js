@@ -11,6 +11,10 @@ export function setupLabUi({ onSubmit }) {
   const simulationSelect = document.querySelector("#simulationSelect");
   const gravityParams = document.querySelector("#gravityParams");
   const mazeParams = document.querySelector("#mazeParams");
+  const mazeRandomInput = document.querySelector("#mazeRandomInput");
+  const mazeSizeInput = document.querySelector("#mazeSizeInput");
+  const mazeDensityInput = document.querySelector("#mazeDensityInput");
+  const mazeSeedInput = document.querySelector("#mazeSeedInput");
   const speedSelect = document.querySelector("#speedSelect");
   const runSimulationButton = document.querySelector("#runSimulationButton");
   const playPauseButton = document.querySelector("#playPauseButton");
@@ -76,12 +80,33 @@ export function setupLabUi({ onSubmit }) {
       }
     },
     getMazeAgentParams() {
-      return {
-        grid_size: 7,
+      const seed = readOptionalInteger(mazeSeedInput);
+      const params = {
+        grid_size: clampNumber(readNumber(mazeSizeInput, 7), 5, 11),
         steps_per_cell: 12,
         dt: 0.08,
         show_search: false,
+        randomize: mazeRandomInput.checked,
+        wall_density: clampNumber(readNumber(mazeDensityInput, 0.32), 0, 1),
       };
+      if (seed !== null) {
+        params.seed = seed;
+      }
+      return params;
+    },
+    applyMazeAgentParams(params = {}) {
+      if (typeof params.grid_size === "number") {
+        mazeSizeInput.value = params.grid_size.toString();
+      }
+      if (typeof params.randomize === "boolean") {
+        mazeRandomInput.checked = params.randomize;
+      }
+      if (typeof params.wall_density === "number") {
+        mazeDensityInput.value = params.wall_density.toString();
+      }
+      if (typeof params.seed === "number") {
+        mazeSeedInput.value = params.seed.toString();
+      }
     },
     setSimulationMode(simulationName) {
       setSimulationMode(simulationName);
@@ -148,4 +173,16 @@ function setBusy(button, input, isBusy) {
 function readNumber(input, fallback) {
   const value = Number(input.value);
   return Number.isFinite(value) ? value : fallback;
+}
+
+function readOptionalInteger(input) {
+  if (!input.value.trim()) {
+    return null;
+  }
+  const value = Number.parseInt(input.value, 10);
+  return Number.isFinite(value) ? value : null;
+}
+
+function clampNumber(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum);
 }

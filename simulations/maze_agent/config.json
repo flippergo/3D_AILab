@@ -2,5 +2,8 @@
   "grid_size": 7,
   "steps_per_cell": 12,
   "dt": 0.08,
-  "show_search": false
+  "show_search": false,
+  "randomize": false,
+  "seed": null,
+  "wall_density": 0.32
 }

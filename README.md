@@ -103,7 +103,7 @@ uvicorn backend.app:app --reload
 ## Phase 7a: maze_agent の使い方
 
 画面右側のシミュレーション選択で `maze_agent` を選び、`実行` を押します。
-固定された7x7迷路で、エージェントがBFS系の軽量探索で求めた経路に沿ってスタートからゴールへ進みます。
+固定迷路またはランダム迷路で、エージェントがBFS系の軽量探索で求めた経路に沿ってスタートからゴールへ進みます。
 
 操作ボタンは `gravity_ball` と共通です。
 
@@ -113,12 +113,20 @@ uvicorn backend.app:app --reload
 - `ステップ`: 1フレーム進める
 - `再生速度`: 0.5x、1x、2x、4x を切り替える
 
+`maze_agent` では次も変更できます。
+
+- `ランダム迷路を生成`: オンにすると毎回違う迷路を生成する
+- `迷路サイズ`: 7x7、9x9、11x11
+- `壁の多さ`: 大きいほど壁が増える
+- `シード`: 同じ番号なら同じランダム迷路を再現する。空なら毎回変わる
+
 チャット欄に次のような文を入力しても、自動で `maze_agent` に切り替えて実行します。
 
 ```text
 迷路をエージェントが進む
 迷路のゴールまで進んで
 迷路をエージェントが学習しながら進む
+ランダムな迷路をエージェントが進む
 ```
 
 Phase 7a の `maze_agent` は、強化学習ではありません。
@@ -182,7 +190,7 @@ Invoke-RestMethod `
   -Method Post `
   -Uri http://127.0.0.1:8000/simulations/maze_agent/run `
   -ContentType "application/json" `
-  -Body '{"grid_size":7,"steps_per_cell":12,"dt":0.08,"show_search":false}'
+  -Body '{"grid_size":9,"steps_per_cell":12,"dt":0.08,"show_search":false,"randomize":true,"wall_density":0.32}'
 ```
 
 迷路の最新結果の取得:
